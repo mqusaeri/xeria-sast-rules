@@ -1,0 +1,4 @@
+# Tidak ada suppression global pada rilis ini.
+# Alasan historis 31 pengecualian ada di docs/suppression-review.json pada repository.
+# Terapkan exception hanya setelah scope proyek dan positive regression diverifikasi.
+suppress: []

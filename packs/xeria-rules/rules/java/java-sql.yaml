@@ -1,0 +1,384 @@
+# Java: query SQL yang disusun dari input pengguna dengan sambungan string.
+#
+# Dua sumber input yang tingkatnya berbeda:
+#  - kolom isian layar (Swing, JavaFX, Android) — aplikasi desktop dan
+#    seluler; penyerangnya pengguna yang sudah masuk aplikasi, jadi TINGGI.
+#  - permintaan web (Servlet, Spring, JAX-RS) — siapa pun yang bisa mengirim
+#    permintaan, jadi KRITIS.
+#
+# Diukur di SIMRS Soepraoen (turunan SIMRS-Khanza, Java Swing, 1.891 berkas):
+# aturan Java bawaan semgrep-rules hanya mengenal sumber web, sehingga 0 dari
+# ratusan query berkolom pencarian tertangkap; temuannya hanya di dalam helper
+# sekuel.java. Analisis AI atas proyek yang sama menandai 928 SQL Injection,
+# sebagian dari kolom yang tidak bisa diketik (setEditable(false)) atau label.
+rules:
+  - id: java-sql-from-ui-input
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Query SQL disusun dari teks kolom isian layar dengan sambungan string.
+      Pengguna aplikasi dapat mengetik ' OR '1'='1 atau '; DROP … untuk
+      membaca, mengubah, atau menghapus data di luar yang diizinkan layar ini
+      — pada aplikasi desktop yang tersambung langsung ke basis data, satu
+      kolom pencarian cukup untuk membaca seluruh tabel. Pakai
+      PreparedStatement dengan placeholder ? dan setString()/setInt(); pada
+      helper SIMRS-Khanza pakai overload yang menerima array nilai
+      (mis. Sequel.menyimpantf(tabel, "?,?", "Kode", 2, new String[]{...})).
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern: $F.getText()
+          # Kolom yang dibuat tidak bisa diketik di kelas yang sama: nilainya
+          # diisi program (mis. nomor rawat terpilih), bukan diketik pengguna.
+          - pattern-not-inside: |
+              class $CLS {
+                ...
+                $RET $METHOD(...) {
+                  ...
+                  $F.setEditable(false);
+                  ...
+                }
+                ...
+              }
+          - pattern-not-inside: |
+              class $CLS {
+                ...
+                $CTOR(...) {
+                  ...
+                  $F.setEditable(false);
+                  ...
+                }
+                ...
+              }
+          - pattern-not-inside: |
+              class $CLS {
+                ...
+                $RET $METHOD(...) {
+                  ...
+                  $F.setEnabled(false);
+                  ...
+                }
+                ...
+              }
+          - pattern-not-inside: |
+              class $CLS {
+                ...
+                $CTOR(...) {
+                  ...
+                  $F.setEnabled(false);
+                  ...
+                }
+                ...
+              }
+          # Kolom tersembunyi tidak dapat diketik.
+          - pattern-not-inside: |
+              class $CLS {
+                ...
+                $RET $METHOD(...) {
+                  ...
+                  $F.setVisible(false);
+                  ...
+                }
+                ...
+              }
+          - pattern-not-inside: |
+              class $CLS {
+                ...
+                $CTOR(...) {
+                  ...
+                  $F.setVisible(false);
+                  ...
+                }
+                ...
+              }
+          # Label dan tombol: teksnya ditulis aplikasi.
+          - pattern-not: (widget.Label $X).getText()
+          - pattern-not: (javax.swing.JLabel $X).getText()
+          - pattern-not: (JLabel $X).getText()
+          - pattern-not: (widget.Button $X).getText()
+          - pattern-not: (javax.swing.JButton $X).getText()
+          - pattern-not: (JButton $X).getText()
+          - pattern-not: (javafx.scene.control.Label $X).getText()
+          - pattern-not: (Label $X).getText()
+      # Kolom yang dikunci di satu tempat tetapi dibuka lagi tetap bisa
+      # diketik sebagian pengguna — argumen apa pun selain literal false:
+      # true, atau ekspresi peran seperti KdDokter.setEditable(
+      # akses.getadmin()) di SIMRS-Khanza. Hanya di dalam method (pola
+      # konstruktor menambah biaya 50% dan membuat DlgKamarInap 1,7 MB
+      # kena timeout), nama method eksplisit ($F.$SETTER($ARG) cocok dengan
+      # setiap pemanggilan di kelas raksasa).
+      # (1) setEditable/setEnabled dibuka lagi.
+      - patterns:
+          - pattern: $F.getText()
+          - pattern-either:
+              - pattern-inside: |
+                  class $CLS {
+                    ...
+                    $RET $METHOD(...) {
+                      ...
+                      $F.setEditable($ARG);
+                      ...
+                    }
+                    ...
+                  }
+              - pattern-inside: |
+                  class $CLS {
+                    ...
+                    $RET $METHOD(...) {
+                      ...
+                      $F.setEnabled($ARG);
+                      ...
+                    }
+                    ...
+                  }
+          - metavariable-regex:
+              metavariable: $ARG
+              regex: ^(?!false$)
+          - pattern-not: (widget.Label $X).getText()
+          - pattern-not: (javax.swing.JLabel $X).getText()
+          - pattern-not: (JLabel $X).getText()
+          - pattern-not: (widget.Button $X).getText()
+          - pattern-not: (javax.swing.JButton $X).getText()
+          - pattern-not: (JButton $X).getText()
+          - pattern-not: (javafx.scene.control.Label $X).getText()
+          - pattern-not: (Label $X).getText()
+      # (2) Dimunculkan lagi (setVisible) — hanya membuka kunci "tersembunyi";
+      # kolom yang tetap dikunci setEditable/setEnabled(false) tidak bisa
+      # diketik (KdKamar di InhealthCekEligibilitas SIMRS Soepraoen).
+      - patterns:
+          - pattern: $F.getText()
+          - pattern-inside: |
+                  class $CLS {
+                    ...
+                    $RET $METHOD(...) {
+                      ...
+                      $F.setVisible($ARG);
+                      ...
+                    }
+                    ...
+                  }
+          - metavariable-regex:
+              metavariable: $ARG
+              regex: ^(?!false$)
+          - pattern-not-inside: |
+                  class $CLS2 {
+                    ...
+                    $RET2 $METHOD2(...) {
+                      ...
+                      $F.setEditable(false);
+                      ...
+                    }
+                    ...
+                  }
+          - pattern-not-inside: |
+                  class $CLS2 {
+                    ...
+                    $CTOR2(...) {
+                      ...
+                      $F.setEditable(false);
+                      ...
+                    }
+                    ...
+                  }
+          - pattern-not-inside: |
+                  class $CLS2 {
+                    ...
+                    $RET2 $METHOD2(...) {
+                      ...
+                      $F.setEnabled(false);
+                      ...
+                    }
+                    ...
+                  }
+          - pattern-not-inside: |
+                  class $CLS2 {
+                    ...
+                    $CTOR2(...) {
+                      ...
+                      $F.setEnabled(false);
+                      ...
+                    }
+                    ...
+                  }
+          - pattern-not: (widget.Label $X).getText()
+          - pattern-not: (javax.swing.JLabel $X).getText()
+          - pattern-not: (JLabel $X).getText()
+          - pattern-not: (widget.Button $X).getText()
+          - pattern-not: (javax.swing.JButton $X).getText()
+          - pattern-not: (JButton $X).getText()
+          - pattern-not: (javafx.scene.control.Label $X).getText()
+          - pattern-not: (Label $X).getText()
+      - pattern: JOptionPane.showInputDialog(...)
+      - pattern: javax.swing.JOptionPane.showInputDialog(...)
+      - pattern: new String($F.getPassword())
+      - pattern: String.valueOf($F.getPassword())
+    pattern-sanitizers: &java-sql-sanitizers
+      - pattern: Integer.parseInt(...)
+      - pattern: Integer.valueOf(...)
+      - pattern: Long.parseLong(...)
+      - pattern: Long.valueOf(...)
+      - pattern: Double.parseDouble(...)
+      - pattern: Double.valueOf(...)
+      - pattern: Float.parseFloat(...)
+      - pattern: new BigDecimal(...)
+      - pattern: UUID.fromString(...)
+      - pattern: LocalDate.parse(...)
+    pattern-sinks: &java-sql-sinks
+      - patterns:
+          - pattern-either:
+              - pattern: $C.prepareStatement($Q, ...)
+              - pattern: $C.prepareCall($Q, ...)
+              - pattern: $C.nativeSQL($Q)
+              - pattern: (java.sql.Statement $S).executeQuery($Q)
+              - pattern: (java.sql.Statement $S).executeUpdate($Q, ...)
+              - pattern: (java.sql.Statement $S).execute($Q, ...)
+              - pattern: (java.sql.Statement $S).addBatch($Q)
+              - pattern: (Statement $S).executeQuery($Q)
+              - pattern: (Statement $S).executeUpdate($Q, ...)
+              - pattern: (Statement $S).execute($Q, ...)
+              - pattern: (Statement $S).addBatch($Q)
+              - pattern: $C.createStatement().executeQuery($Q)
+              - pattern: $C.createStatement().executeUpdate($Q, ...)
+              - pattern: $C.createStatement().execute($Q, ...)
+              # JPA / Hibernate.
+              - pattern: $EM.createQuery($Q, ...)
+              - pattern: $EM.createNativeQuery($Q, ...)
+              - pattern: $EM.createSQLQuery($Q)
+              # Android SQLite.
+              - pattern: $DB.rawQuery($Q, ...)
+              - pattern: $DB.execSQL($Q, ...)
+              - pattern: $DB.compileStatement($Q)
+          - focus-metavariable: $Q
+      # Spring JdbcTemplate dan sejenisnya, dikenali dari nama objeknya.
+      - patterns:
+          - pattern: $JDBC.$M($Q, ...)
+          - metavariable-regex:
+              metavariable: $JDBC
+              regex: (?i).*jdbc.*
+          - metavariable-regex:
+              metavariable: $M
+              regex: ^(query|queryForList|queryForObject|queryForMap|queryForRowSet|queryForStream|update|execute|batchUpdate)$
+          - focus-metavariable: $Q
+      # Helper SIMRS-Khanza (fungsi/sekuel.java): argumen pertama adalah SQL
+      # utuh yang dijalankan apa adanya.
+      - patterns:
+          - pattern-either:
+              - pattern: Sequel.$M($Q, ...)
+              - pattern: (sekuel $SEK).$M($Q, ...)
+          - metavariable-regex:
+              metavariable: $M
+              regex: ^(cariIsi\w*|cariInteger\w*|cariString|cariGambar|cariDouble\w*|query|queryu|queryu2|queryutf|queryutf2|queryu2tf|queryu3|queryu4|AutoComitFalse|executeQuery)$
+          - focus-metavariable: $Q
+      # menyimpan*(tabel, nilai, …) dan mengedit*(tabel, acuan, ubah, …):
+      # nilai, acuan, dan bagian SET disambung ke SQL. Overload berparameter
+      # memakai "?,?" tetap di posisi itu — tidak tercemar, tidak dilaporkan.
+      - patterns:
+          - pattern-either:
+              - pattern: Sequel.$M($T, $V, ...)
+              - pattern: (sekuel $SEK).$M($T, $V, ...)
+          - metavariable-regex:
+              metavariable: $M
+              regex: ^(menyimpan\w*|mengedit\w*)$
+          - focus-metavariable: $V
+      - patterns:
+          - pattern-either:
+              - pattern: Sequel.$M($T, $A, $U, ...)
+              - pattern: (sekuel $SEK).$M($T, $A, $U, ...)
+          - metavariable-regex:
+              metavariable: $M
+              regex: ^(mengedit\w*|menyimpan|menyimpantf)$
+          - focus-metavariable: $U
+      # fungsi/validasi.java: laporan Jasper dari SQL utuh, nomor otomatis,
+      # dan ubah data tabel.
+      - patterns:
+          - pattern-either:
+              - pattern: Valid.$M($R, $D, $J, $Q, ...)
+              - pattern: (validasi $VAL).$M($R, $D, $J, $Q, ...)
+          - metavariable-regex:
+              metavariable: $M
+              regex: ^MyReportqry\w*$
+          - focus-metavariable: $Q
+      - patterns:
+          - pattern-either:
+              - pattern: Valid.$M($Q, ...)
+              - pattern: (validasi $VAL).$M($Q, ...)
+          - metavariable-regex:
+              metavariable: $M
+              regex: ^autoNomer\w*$
+          - focus-metavariable: $Q
+      - patterns:
+          - pattern-either:
+              - pattern: Valid.editTabletf($TM, $T, $FA, $NF, $U, ...)
+              - pattern: Valid.editTable($TM, $T, $FA, $NF, $U, ...)
+          - focus-metavariable: $U
+    metadata:
+      # Diperiksa mesin XERIA sesudah Opengrep (engines/code/file_requirements.dart):
+      # temuan hanya di berkas antarmuka. getText() juga milik pustaka XML
+      # (JDOM/dom4j), Selenium, dan parser JSON. Penjaga di dalam pola
+      # ("import …; ..." atau "class … extends …") lima kali lebih lambat
+      # pada berkas SIMRS 2–3 MB, dan yang pertama memakan 13,8 GB memori.
+      # SIMRS Soepraoen: 699 dari 699 berkas bertemuan memenuhi syarat ini.
+      xeria-syarat-berkas: '^\s*import\s+(?:javax\.swing|java\.awt|javafx\.scene|android\.(?:widget|app|view)|androidx\.)|extends\s+(?:javax\.swing\.)?J(?:Dialog|Frame|Panel|InternalFrame|Applet|Window)\b|extends\s+(?:AppCompat|Fragment|Component)?Activity\b|extends\s+Fragment\b'
+      judul: "SQL Injection dari kolom isian aplikasi (Java)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [java, swing, javafx, android, jdbc, simrs-khanza]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+        - https://docs.oracle.com/javase/tutorial/jdbc/basics/prepared.html
+
+  - id: java-sql-from-request
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Query SQL disusun dari input permintaan web (parameter, header, cookie,
+      atau isi permintaan) dengan sambungan string. Siapa pun yang dapat
+      mengirim permintaan ke endpoint ini dapat menyisipkan SQL untuk membaca
+      atau mengubah seluruh basis data, termasuk tanpa login bila endpoint-nya
+      terbuka. Pakai PreparedStatement dengan placeholder ?, parameter
+      bernama JPA (:nama dengan setParameter), atau argumen JdbcTemplate —
+      jangan menyambung nilai ke dalam SQL.
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern: (javax.servlet.http.HttpServletRequest $R).$M(...)
+              - pattern: (jakarta.servlet.http.HttpServletRequest $R).$M(...)
+              - pattern: (HttpServletRequest $R).$M(...)
+              - pattern: (ServletRequest $R).$M(...)
+          # getSession(), getContextPath(), dan sejenisnya bukan data
+          # kiriman penyerang.
+          - metavariable-regex:
+              metavariable: $M
+              regex: ^(getParameter|getParameterValues|getParameterMap|getParameterNames|getHeader|getHeaders|getQueryString|getCookies|getInputStream|getReader|getRequestURI|getRequestURL|getPathInfo|getServletPath)$
+      - patterns:
+          # Parameter handler Spring MVC dan JAX-RS.
+          - pattern-either:
+              - pattern-inside: |
+                  $RET $HANDLER(..., @$ANN(...) $TYPE $P, ...) { ... }
+              - pattern-inside: |
+                  $RET $HANDLER(..., @$ANN $TYPE $P, ...) { ... }
+          - metavariable-regex:
+              metavariable: $ANN
+              regex: ^(RequestParam|PathVariable|RequestBody|RequestHeader|CookieValue|MatrixVariable|QueryParam|PathParam|FormParam|HeaderParam|CookieParam)$
+          - pattern: $P
+    pattern-sanitizers: *java-sql-sanitizers
+    pattern-sinks: *java-sql-sinks
+    metadata:
+      judul: "SQL Injection dari input permintaan web (Java)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [java, spring, servlet, jax-rs, jdbc, hibernate, jpa]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+        - https://docs.spring.io/spring-framework/reference/data-access/jdbc/core.html

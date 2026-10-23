@@ -1,0 +1,616 @@
+# Kode yang berjalan di browser: DOM XSS, pengalihan, postMessage, React,
+# penyimpanan token, dan Electron.
+#
+# Sumber input DOM: location (search, hash, href), document.URL,
+# document.referrer, window.name, dan data dari event message.
+rules:
+  - id: dom-xss-sink-from-url
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Data dari URL atau dokumen (location, document.referrer, window.name)
+      dimasukkan ke HTML halaman lewat innerHTML, outerHTML, document.write,
+      insertAdjacentHTML, atau jQuery .html(). Penyerang cukup mengirim tautan
+      berisi skrip untuk menjalankannya di browser korban (DOM XSS). Gunakan
+      textContent, atau sanitasi dengan DOMPurify.sanitize.
+    mode: taint
+    pattern-sources: &dom-sources
+      - pattern-either:
+          - pattern: location.search
+          - pattern: location.hash
+          - pattern: location.href
+          - pattern: window.location.search
+          - pattern: window.location.hash
+          - pattern: window.location.href
+          - pattern: document.location.search
+          - pattern: document.location.hash
+          - pattern: document.URL
+          - pattern: document.documentURI
+          - pattern: document.referrer
+          - pattern: window.name
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $EL.innerHTML = $HTML
+              - pattern: $EL.outerHTML = $HTML
+              - pattern: document.write($HTML)
+              - pattern: document.writeln($HTML)
+              - pattern: $EL.insertAdjacentHTML($POS, $HTML)
+              - pattern: $(...).html($HTML)
+              - pattern: $(...).append($HTML)
+              - pattern: $(...).prepend($HTML)
+          - focus-metavariable: $HTML
+    pattern-sanitizers: &dom-sanitizers
+      - pattern: DOMPurify.sanitize(...)
+      - pattern: sanitizeHtml(...)
+      - pattern: encodeURIComponent(...)
+    metadata:
+      judul: "DOM XSS dari data URL ke innerHTML"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: MEDIUM
+      technology: [browser, javascript, jquery]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html
+
+  - id: dom-open-redirect-from-url
+    languages:
+    - javascript
+    - typescript
+    severity: WARNING
+    message: Data URL dipakai sebagai tujuan pengalihan. Parsing atau sanitasi HTML tidak membatasi tujuan.
+      Bangun URL, bandingkan origin-nya dengan origin tepercaya, dan gunakan href dari objek URL yang sama
+      hanya pada cabang yang lolos pemeriksaan.
+    mode: taint
+    pattern-sources:
+    - pattern-either:
+      - pattern: location.search
+      - pattern: location.hash
+      - pattern: window.location.search
+      - pattern: window.location.hash
+      - pattern: document.location.search
+      - pattern: document.location.hash
+      - pattern: document.referrer
+      - pattern: window.name
+      - pattern: new URLSearchParams(...).get(...)
+      - pattern: $P.searchParams.get(...)
+      - pattern: useSearchParams().get(...)
+      - patterns:
+        - pattern: $SP.get(...)
+        - pattern-inside: '$SP = useSearchParams();
+
+            ...
+
+            '
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: location.href = $URL
+        - pattern: window.location.href = $URL
+        - pattern: window.location = $URL
+        - pattern: document.location = $URL
+        - pattern: location.assign($URL)
+        - pattern: location.replace($URL)
+        - pattern: window.location.assign($URL)
+        - pattern: window.location.replace($URL)
+        - pattern: window.open($URL, ...)
+        - pattern: redirect($URL, ...)
+      - focus-metavariable: $URL
+    - patterns:
+      - pattern-either:
+        - pattern: $ROUTER.push($URL, ...)
+        - pattern: $ROUTER.replace($URL, ...)
+      - metavariable-regex:
+          metavariable: $ROUTER
+          regex: (?i)^(\w+\.)*\w*router$
+      - focus-metavariable: $URL
+    pattern-sanitizers:
+    - patterns:
+      - pattern: $TARGET.href
+      - pattern-inside: '$TARGET = new URL(...);
+
+          ...
+
+          '
+      - pattern-inside: if ($TARGET.origin === location.origin) { $...BODY }
+      - focus-metavariable: $...BODY
+      - pattern-not-inside: if ($TARGET.origin === location.origin) { ... $TARGET = $NEW; ... }
+      - pattern-not-inside: if ($TARGET.origin === location.origin) { ... $TARGET.$PROP = $NEW; ... }
+      - pattern-not-inside: if ($TARGET.origin === location.origin) { ... $TARGET[$PROP] = $NEW; ... }
+      - pattern-not-inside: if ($TARGET.origin === location.origin) { ... $TARGET.$PROP += $NEW; ... }
+      - pattern-not-inside: if ($TARGET.origin === location.origin) { ... Object.assign($TARGET, ...); ...
+          }
+      exact: true
+    - patterns:
+      - pattern: $TARGET.href
+      - pattern-inside: '$TARGET = new URL(...);
+
+          ...
+
+          '
+      - pattern-inside: if ($TARGET.origin === window.location.origin) { $...BODY }
+      - focus-metavariable: $...BODY
+      - pattern-not-inside: if ($TARGET.origin === window.location.origin) { ... $TARGET = $NEW; ... }
+      - pattern-not-inside: if ($TARGET.origin === window.location.origin) { ... $TARGET.$PROP = $NEW; ...
+          }
+      - pattern-not-inside: if ($TARGET.origin === window.location.origin) { ... $TARGET[$PROP] = $NEW;
+          ... }
+      - pattern-not-inside: if ($TARGET.origin === window.location.origin) { ... $TARGET.$PROP += $NEW;
+          ... }
+      - pattern-not-inside: if ($TARGET.origin === window.location.origin) { ... Object.assign($TARGET,
+          ...); ... }
+      exact: true
+    - patterns:
+      - pattern: $TARGET.href
+      - pattern-inside: '$TARGET = new URL(...);
+
+          ...
+
+          '
+      - metavariable-regex:
+          metavariable: $ORIGIN
+          regex: ^https?://[^/]+$
+      - pattern-inside: if ($TARGET.origin === "$ORIGIN") { $...BODY }
+      - focus-metavariable: $...BODY
+      - pattern-not-inside: if ($TARGET.origin === "$ORIGIN") { ... $TARGET = $NEW; ... }
+      - pattern-not-inside: if ($TARGET.origin === "$ORIGIN") { ... $TARGET.$PROP = $NEW; ... }
+      - pattern-not-inside: if ($TARGET.origin === "$ORIGIN") { ... $TARGET[$PROP] = $NEW; ... }
+      - pattern-not-inside: if ($TARGET.origin === "$ORIGIN") { ... $TARGET.$PROP += $NEW; ... }
+      - pattern-not-inside: if ($TARGET.origin === "$ORIGIN") { ... Object.assign($TARGET, ...); ... }
+      exact: true
+    metadata:
+      judul: Open redirect dari data URL (DOM)
+      category: security
+      subcategory:
+      - vuln
+      cwe: 'CWE-601: URL Redirection to Untrusted Site'
+      owasp: A01:2021 - Broken Access Control
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology:
+      - browser
+      - javascript
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html
+
+  - id: dom-eval-from-url
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Data dari URL atau dokumen dieksekusi sebagai kode (eval, new Function,
+      atau setTimeout dengan string). Tautan buatan penyerang cukup untuk
+      menjalankan skrip sembarang di browser korban. Jangan mengeksekusi data;
+      gunakan JSON.parse atau pemetaan nilai.
+    mode: taint
+    pattern-sources: *dom-sources
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: eval($CODE)
+              - pattern: new Function(..., $CODE)
+              - pattern: setTimeout($CODE, ...)
+              - pattern: setInterval($CODE, ...)
+          - focus-metavariable: $CODE
+    metadata:
+      judul: "Data URL dijalankan sebagai kode (DOM)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [browser, javascript]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html
+
+  - id: postmessage-wildcard-target-origin
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      postMessage dikirim dengan target origin "*". Bila jendela tujuan sudah
+      berpindah ke situs lain, data (token, data pengguna) ikut terkirim ke situs
+      itu. Tentukan origin tujuan secara eksplisit.
+    pattern: $W.postMessage($MSG, "*", ...)
+    metadata:
+      judul: "postMessage dikirim tanpa membatasi origin tujuan"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-345: Insufficient Verification of Data Authenticity"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [browser, javascript]
+      references:
+        - https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage#security_concerns
+
+  - id: postmessage-listener-without-origin-check
+    languages:
+    - javascript
+    - typescript
+    severity: WARNING
+    message: Data postMessage mencapai HTML, eksekusi kode, atau pengalihan tanpa origin guard yang dikenali.
+      Logging event.origin bukan validasi. Periksa origin tepercaya sebelum membaca event.data; rule ini
+      memodelkan callback inline dan guard literal yang terikat pada event yang sama.
+    metadata:
+      judul: Pendengar postMessage tidak memeriksa event.origin
+      category: security
+      subcategory:
+      - vuln
+      cwe: 'CWE-346: Origin Validation Error'
+      owasp: A07:2021 - Identification and Authentication Failures
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology:
+      - browser
+      - javascript
+      references:
+      - https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage#security_concerns
+    mode: taint
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: $W.addEventListener("message", ($EVENT) => { ... }, ...)
+        - pattern-inside: $W.addEventListener("message", function($EVENT) { ... }, ...)
+        - pattern-inside: addEventListener("message", ($EVENT) => { ... }, ...)
+        - pattern-inside: addEventListener("message", function($EVENT) { ... }, ...)
+      - pattern: $EVENT.data
+      exact: true
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: $EL.innerHTML = $DATA
+        - pattern: $EL.outerHTML = $DATA
+        - pattern: $EL.insertAdjacentHTML($POS, $DATA)
+        - pattern: document.write($DATA)
+        - pattern: eval($DATA)
+        - pattern: window.location.href = $DATA
+        - pattern: location.href = $DATA
+      - focus-metavariable: $DATA
+    pattern-sanitizers:
+    - patterns:
+      - pattern: $EVENT.data
+      - metavariable-regex:
+          metavariable: $ORIGIN
+          regex: ^https?://[^/]+$
+      - pattern-inside: if ($EVENT.origin === "$ORIGIN") { $...BODY }
+      - focus-metavariable: $...BODY
+      - pattern-not-inside: if ($EVENT.origin === "$ORIGIN") { ... $EVENT = $NEW; ... }
+      - pattern-not-inside: if ($EVENT.origin === "$ORIGIN") { ... $EVENT.$PROP = $NEW; ... }
+      - pattern-not-inside: if ($EVENT.origin === "$ORIGIN") { ... $EVENT[$PROP] = $NEW; ... }
+      - pattern-not-inside: if ($EVENT.origin === "$ORIGIN") { ... Object.assign($EVENT, ...); ... }
+      exact: true
+    - patterns:
+      - pattern: $EVENT.data
+      - metavariable-regex:
+          metavariable: $ORIGIN
+          regex: ^https?://[^/]+$
+      - pattern-inside: 'if ($EVENT.origin !== "$ORIGIN") { return; }
+
+          $...BODY
+
+          '
+      - focus-metavariable: $...BODY
+      - pattern-not-inside: 'if ($EVENT.origin !== "$ORIGIN") { return; }
+
+          ...
+
+          $EVENT = $NEW;
+
+          ...
+
+          '
+      - pattern-not-inside: 'if ($EVENT.origin !== "$ORIGIN") { return; }
+
+          ...
+
+          $EVENT.$PROP = $NEW;
+
+          ...
+
+          '
+      - pattern-not-inside: 'if ($EVENT.origin !== "$ORIGIN") { return; }
+
+          ...
+
+          $EVENT[$PROP] = $NEW;
+
+          ...
+
+          '
+      - pattern-not-inside: 'if ($EVENT.origin !== "$ORIGIN") { return; }
+
+          ...
+
+          Object.assign($EVENT, ...);
+
+          ...
+
+          '
+      exact: true
+
+  - id: dom-html-rows-from-data-fields
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Baris tabel/daftar HTML disusun dari field data (${x.perihal}) tanpa
+      escape, lalu — pada aplikasi tanpa framework — dipasang ke innerHTML.
+      Bila field itu diisi pengguna (perihal surat, nama, catatan), teks
+      berisi <img src=x onerror=...> dijalankan di browser setiap pengguna
+      yang membuka daftar tersebut (stored XSS). Escape setiap nilai sebelum
+      disisipkan, atau bangun baris dengan createElement dan textContent.
+    # Pola SC WFH KODAM XXIII PW: renderSuratMasuk() menyusun <tr> dari data API
+    # di app-pages.js, dipasang ke innerHTML di app-ui.js — lintas berkas,
+    # sehingga aturan penyusun HTML → innerHTML tidak menjangkaunya.
+    # Formatter tooltip grafik (SIPAKAT/SIPANSA: p.seriesName) dikecualikan:
+    # isinya nama seri dari kode aplikasi.
+    patterns:
+      - pattern-either:
+          - pattern: '$ARR.map(($X) => $TPL)'
+          - pattern: '$ARR.map(function ($X) { return $TPL; })'
+      - metavariable-regex:
+          metavariable: $TPL
+          regex: (?s)^`.*<(tr|td|li|div|span|option|p|h[1-6]|b|strong|a)\b.*\$\{\s*[A-Za-z_]\w*(\.[A-Za-z_]\w*)+\s*\}.*`$
+      - pattern-not-inside: '{..., formatter: $F, ...}'
+      - pattern-not-inside: '$O.formatter = $F'
+      - focus-metavariable: $TPL
+    metadata:
+      judul: "HTML baris tabel disusun dari field data tanpa escape"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: LOW
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [browser, javascript]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html
+
+  - id: react-dangerously-set-inner-html
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      dangerouslySetInnerHTML menampilkan HTML yang berasal dari props, state,
+      atau respons API tanpa sanitasi. Bila isinya dapat diubah pengguna —
+      misalnya isi surat, komentar, atau pesan — penyerang dapat menyisipkan
+      skrip yang berjalan di browser setiap pembacanya (stored XSS). Sanitasi
+      dengan DOMPurify.sanitize, atau tampilkan sebagai teks biasa.
+    mode: taint
+    pattern-sources:
+      # Props komponen yang di-destructure, dengan atau tanpa anotasi tipe.
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  function $C({..., $P, ...}: $T) { ... }
+              - pattern-inside: |
+                  function $C({..., $P, ...}) { ... }
+              - pattern-inside: |
+                  ({..., $P, ...}: $T) => { ... }
+              - pattern-inside: |
+                  ({..., $P, ...}) => { ... }
+              - pattern-inside: |
+                  ({..., $P, ...}: $T) => $RET
+              - pattern-inside: |
+                  ({..., $P, ...}) => $RET
+          - pattern: $P
+      - pattern: await fetch(...)
+      - pattern: await $RES.json()
+      - pattern: await $API.$METHOD(...)
+      - pattern: localStorage.getItem(...)
+      - pattern: sessionStorage.getItem(...)
+      - pattern: $PARAMS.get(...)
+    pattern-sanitizers:
+      - pattern: DOMPurify.sanitize(...)
+      - pattern: sanitize(...)
+      - pattern: sanitizeHtml(...)
+      - pattern: xss(...)
+      - pattern: purify.sanitize(...)
+    pattern-sinks:
+      - patterns:
+          - pattern: '<$EL dangerouslySetInnerHTML={{__html: $HTML}} />'
+          # <style> berisi CSS yang disusun dari konfigurasi — pola bawaan
+          # komponen chart shadcn/ui — bukan HTML dari pengguna.
+          - pattern-not: '<style dangerouslySetInnerHTML={{__html: $X}} />'
+          - focus-metavariable: $HTML
+    metadata:
+      judul: "dangerouslySetInnerHTML tanpa sanitasi (React)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [react, next.js]
+      references:
+        - https://react.dev/reference/react-dom/components/common#dangerously-setting-the-inner-html
+
+  - id: dom-innerhtml-from-html-builder
+    languages:
+    - javascript
+    - typescript
+    severity: WARNING
+    message: Fungsi lokal mengembalikan template HTML dengan nilai dinamis dan hasilnya dipasang ke DOM.
+      Tinjau kepercayaan nilai dan encoding sesuai konteks; gunakan textContent atau sanitasi seluruh HTML
+      dengan pustaka yang sesuai sebelum memasangnya.
+    patterns:
+    - pattern-either:
+      - pattern-inside: 'const $F = (...) => $RET;
+
+          ...
+
+          '
+      - pattern-inside: 'const $F = (...) => { ... return $RET; };
+
+          ...
+
+          '
+      - pattern-inside: 'function $F(...) { ... return $RET; }
+
+          ...
+
+          '
+    - pattern-either:
+      - pattern: $EL.innerHTML = $F(...)
+      - pattern: $EL.outerHTML = $F(...)
+      - pattern: $EL.insertAdjacentHTML($POS, $F(...))
+    - metavariable-regex:
+        metavariable: $RET
+        regex: (?s)^`.*<[a-zA-Z].*\$\{.*`$
+    metadata:
+      judul: HTML rakitan tanpa escape dipasang ke innerHTML
+      category: security
+      subcategory:
+      - audit
+      cwe: 'CWE-79: Improper Neutralization of Input During Web Page Generation'
+      owasp: A03:2021 - Injection
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology:
+      - browser
+      - react
+      - javascript
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html
+
+  - id: react-href-javascript-scheme
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Atribut href diisi nilai dinamis tanpa pemeriksaan skema. Nilai
+      "javascript:..." dari data pengguna akan menjalankan skrip saat tautan
+      diklik. Pastikan URL diawali http:// atau https://, atau lewatkan fungsi
+      validasi URL.
+    patterns:
+      - pattern-either:
+          - pattern: <a href={$URL}>...</a>
+          - pattern: <a href={$URL} />
+      # Nama yang menandakan URL isian pengguna. "url", "link", dan "href"
+      # sendirian tidak dipakai: di proyek nyata itu hampir selalu URL menu
+      # atau konfigurasi yang ditulis pengembang.
+      - metavariable-regex:
+          metavariable: $URL
+          regex: (?i).*(website|homepage|situs|profileurl|profilurl|returnurl|return_to|redirect|callback|nexturl|userurl|avatarlink|sosmed|social).*
+      - pattern-not: <a href={"..."}>...</a>
+    metadata:
+      judul: "Atribut href dinamis tanpa pemeriksaan skema (React)"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: LOW
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [react, next.js]
+      references:
+        - https://github.com/facebook/react/issues/16382
+
+  - id: react-login-form-prefilled-password
+    languages: [javascript, typescript]
+    severity: INFO
+    message: >-
+      Formulir login sudah terisi password bawaan (defaultValues/useState).
+      Nilai ini ikut di bundel JavaScript yang dapat dibaca siapa pun, dan
+      bila akun itu ada di server, penyerang tinggal menekan tombol masuk.
+      Kosongkan nilai awal password, dan pastikan akun contoh tidak ada di
+      server produksi.
+    pattern-either:
+      - patterns:
+          - pattern: '{..., $KEY: "$VAL", ...}'
+          - pattern-inside: '$FORM({..., defaultValues: {...}, ...})'
+          - metavariable-regex:
+              metavariable: $KEY
+              regex: (?i)^(password|passwd|sandi|kata_?sandi)$
+          - metavariable-regex:
+              metavariable: $VAL
+              regex: ^.+$
+          # Laporan pada baris nilai password, bukan awal objeknya.
+          - focus-metavariable: $VAL
+      - patterns:
+          - pattern: 'const [$PASS, $SET] = useState("$VAL")'
+          - metavariable-regex:
+              metavariable: $PASS
+              regex: (?i)^(password|passwd|sandi|kataSandi)$
+          - metavariable-regex:
+              metavariable: $VAL
+              regex: ^.+$
+    metadata:
+      judul: "Formulir login terisi password bawaan (React)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: MEDIUM
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [react, javascript, browser]
+      references:
+        - https://cwe.mitre.org/data/definitions/798.html
+
+  - id: browser-token-in-localstorage
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Token autentikasi disimpan di localStorage/sessionStorage. Penyimpanan ini
+      dapat dibaca skrip apa pun di halaman, sehingga satu celah XSS cukup untuk
+      mencuri sesi pengguna. Simpan token sesi di cookie httpOnly, secure, dan
+      sameSite.
+    patterns:
+      - pattern-either:
+          - pattern: localStorage.setItem("$KEY", ...)
+          - pattern: sessionStorage.setItem("$KEY", ...)
+          - pattern: window.localStorage.setItem("$KEY", ...)
+          # React Native: AsyncStorage tidak terenkripsi
+          - pattern: AsyncStorage.setItem("$KEY", ...)
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: (?i).*(token|jwt|auth|session|bearer|credential|password|refresh).*
+    metadata:
+      judul: "Token autentikasi disimpan di localStorage"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-922: Insecure Storage of Sensitive Information"
+      owasp: "A04:2021 - Insecure Design"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [browser, react, vue, angular, react-native]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#local-storage
+
+  - id: electron-insecure-webpreferences
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Jendela Electron dibuat dengan nodeIntegration: true, contextIsolation:
+      false, sandbox: false, atau webSecurity: false. Konten web yang dimuat —
+      termasuk hasil XSS — dapat memanggil API Node.js dan menjalankan perintah
+      di komputer pengguna. Aktifkan contextIsolation dan sandbox, matikan
+      nodeIntegration, dan gunakan preload dengan contextBridge.
+    pattern-either:
+      - pattern: 'new BrowserWindow({..., webPreferences: {..., nodeIntegration: true, ...}, ...})'
+      - pattern: 'new BrowserWindow({..., webPreferences: {..., contextIsolation: false, ...}, ...})'
+      - pattern: 'new BrowserWindow({..., webPreferences: {..., webSecurity: false, ...}, ...})'
+      - pattern: 'new BrowserWindow({..., webPreferences: {..., sandbox: false, ...}, ...})'
+      - pattern: 'new BrowserWindow({..., webPreferences: {..., allowRunningInsecureContent: true, ...}, ...})'
+    metadata:
+      judul: "Pengaturan webPreferences Electron tidak aman"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-829: Inclusion of Functionality from Untrusted Control Sphere"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [electron]
+      references:
+        - https://www.electronjs.org/docs/latest/tutorial/security

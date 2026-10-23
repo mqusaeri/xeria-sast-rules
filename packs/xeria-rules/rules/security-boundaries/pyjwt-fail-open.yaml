@@ -1,0 +1,32 @@
+rules:
+- id: xeria-pyjwt-verification-fail-open
+  languages:
+  - python
+  severity: WARNING
+  message: Fungsi mengembalikan True setelah pengecualian verifikasi JWT. Jika True dipakai sebagai keputusan
+    autentikasi atau otorisasi, token invalid dapat diterima. Kembalikan penolakan atau teruskan error;
+    periksa kontrak pemanggil.
+  metadata:
+    judul: Kegagalan verifikasi JWT menghasilkan izin
+    category: security
+    subcategory:
+    - audit
+    cwe: 'CWE-636: Not Failing Securely'
+    owasp: A10:2025 - Mishandling of Exceptional Conditions
+    confidence: MEDIUM
+    likelihood: MEDIUM
+    impact: HIGH
+    technology:
+    - python
+    - pyjwt
+    references:
+    - https://pyjwt.readthedocs.io/en/stable/api.html#exceptions
+    tested-engine: OpenGrep 1.29.0
+    limitations: Nilai True/true belum diikat ke keputusan akses pada pemanggil. Periksa apakah boolean
+      berarti izin atau justru indikator error; rule ini review alur kegagalan, bukan bukti authorization
+      bypass.
+  patterns:
+  - pattern: "try:\n    ...\n    jwt.decode(...)\n    ...\nexcept $ERROR:\n    ...\n    return True\n"
+  - metavariable-regex:
+      metavariable: $ERROR
+      regex: ^(?:(?:jwt\.)?(?:exceptions\.)?(?:InvalidTokenError|DecodeError|ExpiredSignatureError|InvalidSignatureError|InvalidAudienceError|InvalidIssuerError|PyJWTError)|Exception|BaseException)$

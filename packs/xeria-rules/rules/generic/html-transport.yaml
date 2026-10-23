@@ -1,0 +1,32 @@
+# Sumber daya halaman yang dimuat lewat HTTP biasa.
+#
+# Pengganti aturan semgrep plaintext-http-link yang menandai setiap tautan
+# http:// — termasuk di dokumentasi pustaka pihak ketiga. Yang berisiko bukan
+# tautan biasa, melainkan skrip, bingkai, dan formulir: isinya dieksekusi atau
+# membawa data pengguna, sehingga dapat disadap dan diubah di jalan.
+rules:
+  - id: html-resource-over-plain-http
+    languages: [regex]
+    paths:
+      include: ["*.html", "*.htm", "*.php", "*.blade.php", "*.twig", "*.ejs", "*.vue"]
+    severity: WARNING
+    message: >-
+      Skrip, bingkai, atau formulir dimuat lewat http:// biasa. Penyerang di
+      jaringan yang sama dapat mengubah isinya (menyisipkan skrip) atau
+      membaca data formulir yang dikirim. Pakai https://, atau URL relatif
+      bila sumbernya satu domain dengan halaman ini.
+    patterns:
+      - pattern-regex: >-
+          <\s*(script|iframe|form)\b[^>]*\b(src|action)\s*=\s*["']http://(?!localhost|127\.0\.0\.1|\[::1\])[^"']+["']
+    metadata:
+      judul: "Skrip, bingkai, atau formulir dimuat lewat http:// (HTML)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-319: Cleartext Transmission of Sensitive Information"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [html, php, browser]
+      references:
+        - https://developer.mozilla.org/en-US/docs/Web/Security/Mixed_content

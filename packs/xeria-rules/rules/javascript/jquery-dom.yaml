@@ -1,0 +1,51 @@
+# HTML yang disusun dari string lalu dipasang ke DOM (jQuery dan DOM API),
+# di halaman server-rendered: view Blade/PHP dan berkas JS biasa.
+#
+# Diukur di SIMAWAS: data tim pemeriksa dan nama unit dari basis data
+# disisipkan ke $('#tabel').append(`<td>${t.name}</td>`) tanpa escape.
+# Pengganti aturan audit semgrep jquery-insecure-method/selector,
+# prohibit-jquery-html, dan insecure-innerhtml yang menandai setiap
+# pemasangan HTML (lihat suppress/aturan-paket-lain.yaml).
+rules:
+  - id: dom-html-from-unescaped-text-field
+    languages:
+    - javascript
+    - typescript
+    severity: WARNING
+    message: HTML yang disusun dengan template literal atau penyambungan string menyisipkan field teks (nama,
+      judul, pesan, jabatan, …) tanpa escape, lalu hasilnya dipasang sebagai HTML lewat .html()/.append()/innerHTML.
+      Teks yang disimpan pengguna lain seperti <img src=x onerror=…> akan dieksekusi di browser setiap orang
+      yang membuka halaman ini (stored XSS). Escape nilainya lebih dulu (misalnya $('<div>').text(v).html()),
+      atau bangun elemen dengan textContent / .text().
+    patterns:
+    - pattern-either:
+      - pattern: $EL.html($TPL)
+      - pattern: $EL.append($TPL)
+      - pattern: $EL.prepend($TPL)
+      - pattern: $EL.after($TPL)
+      - pattern: $EL.before($TPL)
+      - pattern: $EL.replaceWith($TPL)
+      - pattern: $EL.innerHTML = $TPL
+      - pattern: $EL.innerHTML += $TPL
+      - pattern: $EL.outerHTML = $TPL
+      - pattern: $EL.insertAdjacentHTML($POS, $TPL)
+    - metavariable-regex:
+        metavariable: $TPL
+        regex: (?s)(?:^`.*<[a-zA-Z].*\$\{\s*(?:[\w$]+(?:\[[^\]]*\])?\.)*[\w$]*(?i:name|nama|title|judul|subject|perihal|message|pesan|description|deskripsi|keterangan|catatan|notes?|rank|pangkat|position|jabatan|sender|pengirim|content|isi|summary|ringkasan|comment|komentar|username|email|alamat|address|filename)(?:\s*\|\|\s*(?:'[^']*'|"[^"]*"))?(?:\.(?:toUpperCase|toLowerCase|trim)\(\))?\s*\}.*`$|^['"`].*<[a-zA-Z].*['"`]\s*\+\s*\(?\s*(?:[\w$]+(?:\[[^\]]*\])?\.)*[\w$]*(?i:name|nama|title|judul|subject|perihal|message|pesan|description|deskripsi|keterangan|catatan|notes?|rank|pangkat|position|jabatan|sender|pengirim|content|isi|summary|ringkasan|comment|komentar|username|email|alamat|address|filename)\b(?:\s*\|\|\s*(?:'[^']*'|"[^"]*"))?\s*\)?(?:\.(?:toUpperCase|toLowerCase|trim)\(\))?\s*(?:\+.*)?$)
+    metadata:
+      judul: Field teks disisipkan ke HTML tanpa escape
+      category: security
+      subcategory:
+      - audit
+      cwe: 'CWE-79: Improper Neutralization of Input During Web Page Generation'
+      owasp: A03:2021 - Injection
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology:
+      - browser
+      - javascript
+      - jquery
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html
+      - https://api.jquery.com/html/#html2

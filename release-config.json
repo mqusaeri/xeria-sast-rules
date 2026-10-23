@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "releaseDate": "2026-10-23",
+  "engines": {
+    "opengrep": "1.29.0",
+    "gitleaks": "8.30.1"
+  },
+  "packs": {
+    "semgrep-rules": {
+      "version": "2026.10.23.1",
+      "previousVersion": "2026.07.30.1"
+    },
+    "mobsfscan-rules": {
+      "version": "1.0.1",
+      "previousVersion": "1.0.0"
+    },
+    "gitleaks": {
+      "version": "8.30.1.1",
+      "previousVersion": "8.30.1"
+    },
+    "xeria-rules": {
+      "version": "0.10.6",
+      "previousVersion": "0.10.4"
+    }
+  },
+  "baselineCommit": "246a7c825ad37c58b99dda74cb60a500887d3318"
+}

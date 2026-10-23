@@ -1,0 +1,24 @@
+rules:
+- id: openai-missing-moderation
+  languages:
+  - python
+  severity: INFO
+  message: The result of this moderation request is discarded. If moderation is a required policy control,
+    inspect and enforce its result before processing the same input. Moderation is not a substitute for
+    tool authorization or injection defenses. Fire-and-forget monitoring may be intentional.
+  metadata:
+    cwe: 'CWE-252: Unchecked Return Value'
+    category: security
+    subcategory:
+    - audit
+    likelihood: MEDIUM
+    impact: MEDIUM
+    confidence: MEDIUM
+    technology:
+    - openai
+    references:
+    - https://developers.openai.com/api/docs/guides/moderation
+  patterns:
+  - pattern: $CLIENT.moderations.create(...);
+  - pattern-not-inside: $R = ...
+  - pattern-not-inside: return ...

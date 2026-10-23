@@ -1,0 +1,198 @@
+# CodeIgniter: setelan kerangka yang mematikan pertahanan bawaannya.
+#
+# Injeksi dan XSS di controller CodeIgniter ditangani aturan php-native
+# (sumbernya sudah memuat $this->input dan $this->request).
+rules:
+  - id: codeigniter-csrf-protection-disabled
+    languages: [regex]
+    paths:
+      # Salinan konfigurasi untuk server (config-server.php di Pengaduan Sisfo
+      # TNI AD: CSRF FALSE, sementara config.php TRUE) ikut diperiksa.
+      include: ["*config.php", "*config-*.php", "*config_*.php", "*Security.php", "*Filters.php"]
+    severity: WARNING
+    message: >-
+      Perlindungan CSRF CodeIgniter dimatikan. Penyerang dapat membuat halaman
+      yang diam-diam mengirim permintaan atas nama pengguna yang sedang login
+      — mengubah data, menambah pengguna, atau menghapus berkas. Nyalakan
+      kembali ($config['csrf_protection'] = TRUE pada CI3, atau filter 'csrf'
+      pada CI4) dan sertakan token di setiap formulir.
+    patterns:
+      - pattern-regex: \$config\s*\[\s*['"]csrf_protection['"]\s*\]\s*=\s*(FALSE|false|0)\s*;
+    metadata:
+      judul: "Perlindungan CSRF CodeIgniter dimatikan"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-352: Cross-Site Request Forgery (CSRF)"
+      owasp: "A01:2021 - Broken Access Control"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [codeigniter, codeigniter3, php]
+      references:
+        - https://codeigniter.com/userguide3/libraries/security.html#cross-site-request-forgery-csrf
+
+  - id: codeigniter-empty-encryption-key
+    languages: [regex]
+    paths:
+      include: ["*config.php", "*Encryption.php"]
+    severity: ERROR
+    message: >-
+      Kunci enkripsi CodeIgniter kosong. Sesi terenkripsi dan data apa pun
+      yang dilindungi kunci ini tidak lagi aman, dan pada CI3 sesi database
+      terenkripsi menjadi dapat dipalsukan. Isi dengan kunci acak 32 byte yang
+      disimpan di luar repositori.
+    patterns:
+      - pattern-regex: \$config\s*\[\s*['"]encryption_key['"]\s*\]\s*=\s*['"]\s*['"]\s*;
+    metadata:
+      judul: "Kunci enkripsi CodeIgniter kosong"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-321: Use of Hard-coded Cryptographic Key"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [codeigniter, codeigniter3, php]
+      references:
+        - https://codeigniter.com/userguide3/libraries/encryption.html
+
+  - id: codeigniter-database-debug-on
+    languages: [regex]
+    paths:
+      include: ["*database.php", "*Database.php"]
+    severity: WARNING
+    message: >-
+      db_debug menyala pada konfigurasi basis data. Setiap galat query
+      ditampilkan lengkap ke pengunjung — nama tabel, nama kolom, dan potongan
+      SQL — yang mempermudah penyerang menyusun injeksi. Matikan di server
+      produksi dan catat galatnya ke log.
+    patterns:
+      # Dua bentuk: elemen array pada CI3/CI4 ('db_debug' => TRUE,) dan
+      # penugasan terpisah ($db['default']['db_debug'] = TRUE;).
+      - pattern-regex: >-
+          ['"](db_debug|DBDebug)['"]\s*=>\s*(TRUE|true|1)\s*[,)]|\$db\s*\[[^\]]+\]\s*\[\s*['"]db_debug['"]\s*\]\s*=\s*(TRUE|true|1)\s*;
+    metadata:
+      judul: "db_debug CodeIgniter menyala"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-209: Generation of Error Message Containing Sensitive Information"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: LOW
+      technology: [codeigniter, codeigniter3, php]
+      references:
+        - https://codeigniter.com/userguide3/database/configuration.html
+
+  - id: codeigniter-cookie-secure-disabled
+    languages: [regex]
+    paths:
+      include: ["*config.php", "*config-*.php", "*config_*.php"]
+    severity: WARNING
+    message: >-
+      cookie_secure dimatikan, sehingga cookie sesi CodeIgniter juga dikirim
+      lewat http:// biasa. Satu permintaan tanpa HTTPS — tautan lama, atau
+      penyerang di jaringan yang sama yang menurunkan koneksi — cukup untuk
+      membocorkan ID sesi dan mengambil alih login. Setel ke TRUE bila aplikasi
+      dilayani lewat HTTPS. (Cookie sesi CodeIgniter 3 selalu HttpOnly;
+      cookie_httponly = FALSE hanya berlaku untuk cookie lain yang dibuat
+      aplikasi.)
+    pattern-regex: \$config\s*\[\s*['"]cookie_secure['"]\s*\]\s*=\s*(FALSE|false|0)\s*;
+    metadata:
+      judul: "cookie_secure CodeIgniter dimatikan"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-614: Sensitive Cookie in HTTPS Session Without 'Secure' Attribute"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [codeigniter, codeigniter3, php]
+      references:
+        - https://codeigniter.com/userguide3/libraries/sessions.html#session-preferences
+        - https://owasp.org/www-community/controls/SecureCookieAttribute
+
+  - id: codeigniter-upload-allows-any-type
+    languages: [regex]
+    paths:
+      include: ["*.php"]
+    severity: ERROR
+    message: >-
+      Pustaka upload CodeIgniter dikonfigurasi allowed_types = '*': berkas
+      berekstensi apa pun diterima, termasuk .php. encrypt_name hanya mengacak
+      nama; ekstensi aslinya dipertahankan. Bila upload_path berada di dalam
+      web root dan server menjalankan PHP di sana, penyerang yang dapat
+      mengunggah dapat menjalankan perintah di server. Batasi ke ekstensi yang
+      dibutuhkan (mis. 'jpg|jpeg|png|pdf'), dan simpan unggahan di luar web
+      root atau matikan eksekusi PHP di foldernya.
+    pattern-regex: (?m)^(?![ \t]*(//|#|\*))[^\n]*['"]allowed_types['"]\s*(\]\s*=|=>)\s*['"]\*['"]
+    metadata:
+      judul: "Unggahan CodeIgniter menerima semua jenis berkas"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-434: Unrestricted Upload of File with Dangerous Type"
+      owasp: "A04:2021 - Insecure Design"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [codeigniter, codeigniter3, php]
+      references:
+        - https://codeigniter.com/userguide3/libraries/file_uploading.html#preferences
+
+  - id: codeigniter-password-min-length-too-short
+    languages: [regex]
+    paths:
+      include: ["*.php"]
+    severity: WARNING
+    message: >-
+      Validasi password baru hanya mensyaratkan kurang dari 8 karakter
+      (min_length[N]). Password sependek itu dapat ditebak dengan brute force
+      dalam waktu singkat. Naikkan ke minimal 8 karakter sesuai NIST SP
+      800-63B, dan samakan di semua formulir (pendaftaran, ganti password,
+      reset).
+    # Kolom verifikasi/konfirmasi dan password lama tidak dilaporkan: yang
+    # menentukan kekuatan adalah aturan pada kolom password barunya.
+    pattern-regex: set_rules\(\s*['"](?!(old|verify|verifikasi|confirm|konfirmasi|password_verify|password_confirm)\w*['"])\w*pass\w*['"][^;]*?min_length\[[1-7]\]
+    metadata:
+      judul: "Panjang minimum password kurang dari 8 karakter (CodeIgniter)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-521: Weak Password Requirements"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [codeigniter, codeigniter3, codeigniter4, php]
+      references:
+        - https://pages.nist.gov/800-63-3/sp800-63b.html#memsecret
+
+  - id: codeigniter-database-password-in-config
+    languages: [regex]
+    paths:
+      include: ["*database.php", "*Database.php"]
+    severity: WARNING
+    message: >-
+      Password basis data tertulis langsung di berkas konfigurasi. Siapa pun
+      yang memegang salinan kode — repositori, arsip cadangan, atau berkas
+      yang terbawa saat serah terima — mendapat akses ke basis data. Baca dari
+      environment variable (getenv('DB_PASSWORD')) atau berkas di luar
+      repositori, lalu ganti password yang sudah terlanjur tersimpan — termasuk
+      yang hanya dikomentari: baris komentar tetap terbaca siapa pun yang
+      memegang kodenya.
+    # Password kosong tidak dilaporkan: itu bukan rahasia yang bocor. Baris
+    # komentar ikut dilaporkan — di Pengaduan Sisfo TNI AD password produksi
+    # tersimpan sebagai `// 'password' => '...'`.
+    pattern-regex: >-
+      ['"](password|DBPass)['"]\s*=>\s*['"][^'"\s]{4,}['"]
+    metadata:
+      judul: "Password basis data di konfigurasi CodeIgniter"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [codeigniter, codeigniter3, codeigniter4, php]
+      references:
+        - https://codeigniter.com/userguide3/database/configuration.html

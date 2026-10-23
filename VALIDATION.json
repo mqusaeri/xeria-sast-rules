@@ -1,0 +1,171 @@
+{
+  "schema": 1,
+  "date": "2026-10-23",
+  "scope": "Local rule-package validation; no XERIA application execution, deployment or GitHub Actions run claimed.",
+  "baselineCommit": "246a7c825ad37c58b99dda74cb60a500887d3318",
+  "engines": {
+    "opengrep": {
+      "version": "1.29.0",
+      "assetSha256": "3365ef49d04893e01338d85d9bbd49b2bd5261ad4c9c0df0a6a0f8d44232ae13"
+    },
+    "gitleaks": {
+      "version": "8.30.1",
+      "assetSha256": "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+    }
+  },
+  "ruleChanges": {
+    "baselineRules": 1954,
+    "currentRules": 1963,
+    "modifiedRules": 74,
+    "addedRules": 9,
+    "removedRules": 0
+  },
+  "packages": [
+    {
+      "id": "semgrep-rules",
+      "version": "2026.10.23.1",
+      "file": "semgrep-rules-2026.10.23.1.zip",
+      "sha256": "f04e0f78d2eb805afc38e7a6230d9fa83c86a7d645d0c0c822d36ba35f340769",
+      "bytes": 1291184,
+      "ruleCount": 1462,
+      "upstreamRevision": "40b8c63f75dc7c22c8a77482d73bfb864b146f7e"
+    },
+    {
+      "id": "mobsfscan-rules",
+      "version": "1.0.1",
+      "file": "mobsfscan-rules-1.0.1.zip",
+      "sha256": "94e93dfeb9d1f48ec56bbc4d4c59284fd9722f72ce18942733ade66aeb245979",
+      "bytes": 45334,
+      "ruleCount": 103,
+      "upstreamRevision": "2659f2ac6d185f0c60ce2eb754f5f48b683f73fb"
+    },
+    {
+      "id": "gitleaks",
+      "version": "8.30.1.1",
+      "file": "gitleaks-8.30.1.1.zip",
+      "sha256": "fb1030f000169455e55cdeb4a383c2746a6e22f0df1987951359957f54a4e76c",
+      "bytes": 22713,
+      "ruleCount": 222,
+      "upstreamRevision": "v8.30.1 (83d9cd684c87d95d656c1458ef04895a7f1cbd8e)"
+    },
+    {
+      "id": "xeria-rules",
+      "version": "0.10.6",
+      "file": "xeria-rules-0.10.6.zip",
+      "sha256": "f649c553df48d87ef66da74f067a7ae73bb3287b11c01f20006270d4c98b0c58",
+      "bytes": 107949,
+      "ruleCount": 176,
+      "upstreamRevision": "0.10.6"
+    }
+  ],
+  "checks": {
+    "regression": {
+      "command": ".venv/bin/python scripts/test_rules.py --jobs 2",
+      "assertions": 356,
+      "passed": 356,
+      "targetsScanned": 355,
+      "intentionalPathExclusionAssertions": 1,
+      "positiveCases": 209,
+      "scannedCasesWithoutFindings": 146,
+      "engineErrors": 0,
+      "suites": [
+        {
+          "file": "tests/regression/ai-existing.json",
+          "sha256": "6823c744cd8f2d62d6cf97f8ee1a150e1641b101851e4f5a7065bddfa37036a7",
+          "cases": 50,
+          "passed": 50
+        },
+        {
+          "file": "tests/regression/custom-js-misc.json",
+          "sha256": "7d0f0cc55e663efc0f8e70fa893cdd684a55819c0f89e56f26d10454fd5194d8",
+          "cases": 94,
+          "passed": 94
+        },
+        {
+          "file": "tests/regression/custom-php-python.json",
+          "sha256": "ae8b3e681320886fce3fc9fe8b0e017eaa3a6a14a606ac8ab2037b641f940c45",
+          "cases": 95,
+          "passed": 95
+        },
+        {
+          "file": "tests/regression/mobile.json",
+          "sha256": "ce8b8dcb82f89f855e95dc7e60dc4efa753634e87b1ae1ae2572dafaf71248b5",
+          "cases": 46,
+          "passed": 46
+        },
+        {
+          "file": "tests/regression/new-boundaries.json",
+          "sha256": "a78d8a7602bea27daed6860eddb7c1d69bbf98283738341032116791f0c3a22b",
+          "cases": 29,
+          "passed": 29
+        },
+        {
+          "file": "tests/regression/upstream.json",
+          "sha256": "cc17f6422be063c395f5aa2b39b6be25e754478ac6accd8d83a8685b440a8516",
+          "cases": 42,
+          "passed": 42
+        }
+      ],
+      "artifact": ".build/regression-results.json"
+    },
+    "unittest": {
+      "command": ".venv/bin/python -m unittest discover -s tests -v",
+      "tests": 26,
+      "passed": 26,
+      "skipped": 0,
+      "artifact": ".build/unit-tests.log"
+    },
+    "independentPeerReview": {
+      "cases": 23,
+      "passed": 23,
+      "positiveCases": 11,
+      "negativeCases": 12,
+      "sourceSha256": {
+        "rules/javascript/browser.yaml": "e43211edafa147a23e07a013dad9ce869bf8307a279e33df8df02eafd6f6eeb1",
+        "rules/dart/flutter-data.yaml": "030eba3a824d9aade5109386b5bc90c0b124b75e4db63c2116ab051c5dd60869",
+        "rules/python/web-config.yaml": "d4df1e095e779f2cb9977d6221af622ab9e6ddae1a6be1aa058d6cf1298147fe",
+        "rules/php/php-native.yaml": "2f19cf3069485ac6f49b610cc1ec63c09fe31dcfe24e756d658ffe41a6686f31"
+      },
+      "evidence": "docs/validation/peer-guard-results.json"
+    },
+    "coreParse": {
+      "engineVersion": "1.29.0",
+      "yamlFiles": 1538,
+      "allExitZero": true,
+      "artifact": ".build/core-parse/summary.json"
+    },
+    "combinedSmoke": {
+      "command": ".venv/bin/python scripts/smoke_engine.py",
+      "rulesLoaded": 1741,
+      "relevantRulesRun": 675,
+      "targetsScanned": 3,
+      "findings": 11,
+      "engineErrors": 0,
+      "exit": 0,
+      "artifact": ".build/smoke/summary.json"
+    },
+    "releaseIntegrity": {
+      "command": ".venv/bin/python scripts/build_packs.py --check",
+      "passed": true,
+      "checks": [
+        "source-to-manifest exact inventory, sizes and SHA-256",
+        "archive CRC, path/type and inventory verification",
+        "deterministic archive bytes equal rebuild",
+        "release index agrees with all four packages"
+      ]
+    }
+  },
+  "fixtureRestoration": {
+    "annotatedUpstreamFiles": 1517,
+    "fullUpstreamSuiteExecuted": false,
+    "command": ".venv/bin/python scripts/fetch_upstream_fixtures.py"
+  },
+  "limitations": [
+    "356 regression assertions exercise selected rules and cases, not every behavior of all 1,963 rules.",
+    "Synthetic fixtures do not measure production precision or recall.",
+    "Smoke loads 1,741 rules but executes only 675 rules relevant to its three target languages.",
+    "XERIA engine versions, importer, effective IDs, postprocessing, suppression, template extraction and result mapping still require platform verification.",
+    "Registry-backed opengrep validate did not complete during the earlier audit; no successful result is claimed.",
+    "Full upstream behavioral/autofix suite was restored as fixtures but not executed."
+  ]
+}

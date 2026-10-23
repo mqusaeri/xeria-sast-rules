@@ -1,0 +1,101 @@
+# Aplikasi mobile React Native dan komunikasi jaringan tanpa TLS.
+rules:
+  - id: react-native-webview-insecure
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      WebView dikonfigurasi longgar: originWhitelist "*", akses berkas lokal
+      (allowFileAccess, allowUniversalAccessFromFileURLs), atau konten campuran
+      HTTP/HTTPS diizinkan. Halaman atau skrip dari luar dapat membaca berkas
+      aplikasi dan data di WebView. Batasi originWhitelist ke domain aplikasi dan
+      matikan akses berkas.
+    pattern-either:
+      - pattern: '<WebView originWhitelist={["*"]} />'
+      - pattern: <WebView allowFileAccess={true} />
+      - pattern: <WebView allowFileAccessFromFileURLs={true} />
+      - pattern: <WebView allowUniversalAccessFromFileURLs={true} />
+      - pattern: <WebView mixedContentMode="always" />
+    metadata:
+      judul: "WebView React Native dikonfigurasi longgar"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-749: Exposed Dangerous Method or Function"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [react-native, expo]
+      references:
+        - https://github.com/react-native-webview/react-native-webview/blob/master/docs/Reference.md
+        - https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0031/
+
+  - id: cleartext-http-request
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Permintaan jaringan dikirim lewat http:// tanpa TLS ke alamat non-lokal.
+      Data dan token yang dikirim dapat dibaca atau diubah siapa pun di jaringan
+      yang sama (Wi-Fi publik, proxy). Gunakan https://.
+    patterns:
+      - pattern-either:
+          - pattern: fetch("$URL", ...)
+          - pattern: axios.get("$URL", ...)
+          - pattern: axios.post("$URL", ...)
+          - pattern: axios("$URL", ...)
+          - pattern: 'axios.create({..., baseURL: "$URL", ...})'
+          - pattern: new WebSocket("$URL", ...)
+      - metavariable-regex:
+          metavariable: $URL
+          regex: ^(http|ws)://(?!localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[::1\]|[\w.-]+\.(local|localhost|internal|test)\b)
+    metadata:
+      judul: "Permintaan jaringan lewat http:// tanpa TLS"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-319: Cleartext Transmission of Sensitive Information"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [react-native, browser, node.js, axios]
+      references:
+        - https://mas.owasp.org/MASVS/controls/MASVS-NETWORK-1/
+
+  - id: js-hardcoded-password-literal
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Password ditulis langsung di kode (misalnya pada skrip seed atau
+      konfigurasi akun awal). Siapa pun yang membaca kode mengetahui password
+      akun tersebut, dan akun hasil seed sering tidak pernah diganti di
+      produksi. Baca dari environment variable, dan wajibkan penggantian password
+      pada login pertama.
+    patterns:
+      - pattern: '{..., $KEY: "$PW", ...}'
+      # Konfigurasi koneksi basis data sudah ditangani
+      # node-hardcoded-database-password.
+      - pattern-not-inside: $DB.createConnection(...)
+      - pattern-not-inside: $DB.createPool(...)
+      - pattern-not-inside: new $CLS(...)
+      - pattern-not-inside: TypeOrmModule.forRoot(...)
+      - pattern-not-inside: knex(...)
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: (?i)^(password|passwd|pwd|pass|kataSandi|kata_sandi|sandi|adminPassword|defaultPassword|initialPassword)$
+      # Nilai tanpa spasi yang memuat angka — bukan label ("Password:"),
+      # pesan validasi, atau penanda tersamar ("********").
+      - metavariable-regex:
+          metavariable: $PW
+          regex: ^(?=.*\d)(?!(.)\1+$)\S{6,}$
+      - focus-metavariable: $PW
+    metadata:
+      judul: "Password tertulis di kode (JavaScript)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: MEDIUM
+      likelihood: HIGH
+      impact: HIGH
+      technology: [node.js, javascript, typescript, bun]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html

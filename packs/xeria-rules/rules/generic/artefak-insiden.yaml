@@ -1,0 +1,281 @@
+# Artefak insiden yang bukan kode PHP: webshell CGI, konfigurasi Apache yang
+# ditanam penyerang, catatan dropper, halaman defacement, halaman spam SEO,
+# penanda uji unggahan, dan sumber exploit eskalasi hak akses.
+#
+# Diukur pada situs yang sudah dibobol (benchmark F:\SAST, 2026-09-28):
+# doharalutsistaarhanud (ALFA Shell .alfa, .htaccess alfasymlink, catatan
+# dropper ..sys_*.hidden, aw.html "Hacked by 0x0124", file.php judi Thailand),
+# backup kodim1626 (.resource penanda uji unggahan), dan disbintaladtniad
+# (galeri/dirtyfrag/exp.c). Seluruh korpus proyek lain — 18 proyek termasuk
+# SIMRS 30 ribu berkas, plugin WordPress KODIM1016/korem 012, node_modules
+# dan vendor — menghasilkan nol temuan.
+#
+# Berkas ini ikut dijalankan pada pemindaian ulang folder pihak ketiga dan,
+# di mode Threat Detection, atas folder yang dikecualikan (lihat
+# OpengrepEngine.incidentRuleFiles): webshell CGI di KODAM I/BB ditanam di
+# dalam wp-includes.
+#
+# Aturan regex tertambat di awal berkas (\A) melaporkan barisnya lewat \K,
+# supaya anotasi berkas uji dapat ditulis di atas baris temuan.
+rules:
+  # ALFA Shell / Haxor Shell: skrip CGI Perl/Python/Bash berekstensi tidak
+  # lazim (.alfa, .haxor) yang membaca perintah terenkode base64 dari
+  # permintaan lalu menjalankannya.
+  - id: cgi-webshell-command-from-request
+    languages: [regex]
+    severity: ERROR
+    message: >-
+      Skrip CGI ini membaca perintah terenkode base64 dari permintaan HTTP
+      lalu menjalankannya di server — bentuk webshell CGI (ALFA Shell, Haxor
+      Shell). Siapa pun yang mengetahui alamatnya dapat menjalankan perintah
+      sistem dengan hak akses server web. Tangani sebagai insiden: isolasi
+      server, simpan salinan berkas untuk forensik, hapus seluruh folder
+      webshell beserta .htaccess yang mengaktifkan CGI di sana, periksa log
+      akses ke berkas ini, lalu matikan eksekusi CGI di folder web
+      (Options -ExecCGI).
+    pattern-regex: '(?s)\A#![ \t]*\S*\b(perl|python[0-9.]*|bash|sh)\b(?=.*?\b(REQUEST_METHOD|CONTENT_LENGTH|QUERY_STRING|FieldStorage)\b)(?=.*?(decode_base64|b64decode|base64[ \t]+(-d|--decode)\b)).*?\K(\bsystem[ \t]*\(|\bpopen[23]?[ \t]*\(|\bexec[a-z]*[ \t]*\(|\beval\b|\bqx[ \t]*[({/])'
+    metadata:
+      judul: "Webshell CGI menjalankan perintah dari permintaan HTTP"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [cgi, perl, python, bash, apache]
+      references:
+        - https://attack.mitre.org/techniques/T1505/003/
+        - https://cwe.mitre.org/data/definitions/506.html
+
+  # .htaccess alfasymlink doharalutsistaarhanud ("Coded By Sole Sad &
+  # Invisible"): AddType/AddHandler text/plain untuk php bersama Options
+  # all/FollowSymLinks. Fitur "symlink" ALFA Shell memakainya untuk membaca
+  # wp-config.php situs lain lewat tautan simbolik sebagai teks biasa.
+  #
+  # Bentuk yang sama dipakai pengerasan yang sah — kodam13tniadmil
+  # wp-content/uploads/.htaccess buatan tim IR: "AddType text/plain .php"
+  # bersama "Require all denied" dan RemoveHandler, untuk mematikan eksekusi
+  # di folder unggahan. Yang membedakan: berkas penyerang menyalakan
+  # FollowSymLinks/Options all dan tidak menolak akses apa pun.
+  - id: htaccess-php-source-served-as-text
+    languages: [regex]
+    paths:
+      include: [".htaccess", "*.htaccess"]
+    severity: ERROR
+    message: >-
+      .htaccess ini memerintahkan server mengirim berkas PHP sebagai teks
+      biasa sambil mengizinkan tautan simbolik diikuti. Pengerasan yang sah
+      memakai text/plain bersama penolakan akses; di sini tidak ada
+      penolakan — bentuk yang dipasang webshell (fitur "symlink" ALFA Shell)
+      untuk membaca isi berkas konfigurasi — wp-config.php, .env,
+      database.php — milik situs lain di server yang sama. Anggap seluruh
+      kredensial basis data di server itu sudah terbaca: hapus folder ini,
+      ganti kata sandi basis data semua situs yang berbagi server, dan
+      periksa tautan simbolik di folder web.
+    pattern-regex: '(?ims)\A(?!.*?(Require[ \t]+all[ \t]+denied|Deny[ \t]+from[ \t]+all|RemoveHandler|php_flag[ \t]+engine[ \t]+off))(?=.*?^[ \t]*Options\b[^\n]*(\ball\b|FollowSymLinks|SymLinksIfOwnerMatch)).*?\K^[ \t]*Add(Type|Handler)[ \t]+text/plain\b[^\n]*\bph(p[0-9]?|tml)\b'
+    metadata:
+      judul: ".htaccess menyajikan kode sumber PHP sebagai teks"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [apache, htaccess]
+      references:
+        - https://attack.mitre.org/techniques/T1505/003/
+        - https://httpd.apache.org/docs/2.4/mod/mod_mime.html#addtype
+
+  # doharalutsistaarhanud public_html/..sys_1772058165.hidden: sembilan baris
+  # "waktu | https://lix.st/f/…php | /home/…/Divi/…/x.php". Laporan Sonnet
+  # hanya menemukan 3 dari 9 lokasi yang tercatat di berkas ini.
+  - id: dropper-log-remote-payload-to-server-path
+    languages: [regex]
+    severity: ERROR
+    message: >-
+      Baris ini adalah catatan alat penyerang (dropper): waktu, alamat unduhan
+      muatan, dan path berkas PHP tempat muatan itu ditulis di server. Setiap
+      path yang tercatat adalah kemungkinan backdoor dan harus diperiksa satu
+      per satu, termasuk yang tidak dilaporkan aturan lain; alamat unduhannya
+      adalah indikator jaringan untuk diblokir dan dicari di log. Simpan
+      berkas ini sebagai bukti sebelum menghapusnya.
+    pattern-regex: '(?m)^[ \t]*\d{4}-\d\d-\d\d[ T]\d\d:\d\d:\d\d[ \t]*\|[ \t]*https?://\S+[ \t]*\|[ \t]*/\S+\.(php[0-9]?|phtml|phar|inc)[ \t]*$'
+    metadata:
+      judul: "Log dropper penyerang berisi alamat muatan dan path tujuan"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: MEDIUM
+      technology: [php, wordpress]
+      references:
+        - https://attack.mitre.org/techniques/T1105/
+        - https://cwe.mitre.org/data/definitions/506.html
+
+  # doharalutsistaarhanud aw.html: "<title>Hacked by 0x0124</title>".
+  - id: web-defacement-page
+    languages: [regex]
+    paths:
+      include: ["*.html", "*.htm", "*.shtml", "*.php", "*.phtml"]
+    severity: ERROR
+    message: >-
+      Judul halaman ini adalah tanda tangan defacement ("Hacked by …",
+      "Defaced by …"). Halaman seperti ini hanya dapat ditaruh oleh pihak yang
+      sudah dapat menulis berkas ke folder web, jadi keberadaannya membuktikan
+      server sudah disusupi — cari webshell atau akun yang dipakai untuk
+      menulisnya. Simpan salinannya sebagai bukti, hapus, lalu telusuri akses
+      ke halaman ini di log.
+    pattern-regex: '(?i)<title>[^<]{0,80}\b(hacked|h4ck3?d|defaced|pwned|owned|locked)[ \t]+by\b'
+    metadata:
+      judul: "Halaman defacement (Hacked by …)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: MEDIUM
+      technology: [html, php, wordpress]
+      references:
+        - https://attack.mitre.org/techniques/T1491/001/
+
+  # doharalutsistaarhanud file.php: halaman judi daring Thailand 776 KB
+  # (Fox888 Slot) berekstensi .php di akar situs, dipasang bersama berkas
+  # verifikasi Google Search Console milik penyerang.
+  - id: seo-spam-gambling-page
+    languages: [regex]
+    paths:
+      include: ["*.html", "*.htm", "*.shtml", "*.php", "*.phtml", "*.txt"]
+    severity: ERROR
+    message: >-
+      Berkas ini memuat puluhan istilah promosi judi daring (slot gacor,
+      maxwin, togel, istilah judi Thailand) — halaman spam SEO yang ditanam
+      penyerang untuk menumpang reputasi domain ini di mesin pencari. Halaman
+      seperti ini hanya dapat ditaruh oleh pihak yang sudah dapat menulis ke
+      folder web. Hapus berkasnya, cari berkas verifikasi mesin pencari
+      (google*.html) yang dibuat pada waktu yang sama, periksa .htaccess dan
+      index.php terhadap pengalihan berdasarkan User-Agent, lalu ajukan
+      penghapusan URL spam di Google Search Console.
+    pattern-regex: '(?is)\A(?=(?:.*?(slot[ \t]*gacor|\bgacor\b|maxwin|rtp[ \t]*(live|slot)|situs[ \t]*toto|\btogel\b|sbobet|ufabet|sagame|joker123|slot88|pg[ \t]*soft|pragmatic[ \t]*play|สล็อต|บาคาร่า|แตกง่าย)){10}).*?\K(slot[ \t]*gacor|\bgacor\b|maxwin|rtp[ \t]*(live|slot)|situs[ \t]*toto|\btogel\b|sbobet|ufabet|sagame|joker123|slot88|pg[ \t]*soft|pragmatic[ \t]*play|สล็อต|บาคาร่า|แตกง่าย)'
+    metadata:
+      judul: "Halaman spam SEO judi daring yang ditanam penyerang"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: MEDIUM
+      technology: [html, php, wordpress]
+      references:
+        - https://attack.mitre.org/techniques/T1491/
+        - https://developers.google.com/search/docs/essentials/spam-policies#hacked-content
+
+  # backup kodim1626 public_html/.resource: `<?php print "ZAHISCXjrdp".
+  # "sBDOLNzszvwMHWBfxR";exit;` — bot eksploitasi menulis berkas ini untuk
+  # memastikan unggahan berhasil dan dijalankan: responsnya memuat gabungan
+  # kedua string, bukan kode sumbernya.
+  - id: php-upload-probe-marker
+    languages: [regex]
+    severity: ERROR
+    message: >-
+      Berkas ini hanya mencetak dua potongan teks acak yang digabung lalu
+      berhenti — penanda yang ditulis bot eksploitasi untuk memastikan
+      unggahan atau penulisan berkasnya berhasil dan dijalankan server.
+      Keberadaannya berarti penyerang pernah dapat menulis berkas ke folder
+      web. Simpan sebagai bukti, hapus, lalu cari celah unggah yang
+      dipakainya dan berkas lain yang ditulis pada waktu yang sama.
+    pattern-regex: '(?s)\A\s*<\?php\s+(?:(?:#|//)[^\n]*\s+)*\K(print|echo)\s*\(?\s*["''][A-Za-z0-9]{4,}["'']\s*\.\s*["''][A-Za-z0-9]{4,}["'']\s*\)?\s*;\s*(exit|die)\b'
+    metadata:
+      judul: "Berkas penanda uji unggah milik bot eksploitasi"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: MEDIUM
+      technology: [php]
+      references:
+        - https://attack.mitre.org/techniques/T1105/
+
+  # "htaccess locker": semua berkas PHP di folder ditolak — dengan
+  # permutasi huruf besar-kecil PHp/pHp/… atau pola *.ph*/*.pH* dan ekstensi
+  # .suspected milik pemindai hosting — KECUALI satu daftar nama, yaitu
+  # webshell penyerang. Menghalangi webshell penyerang lain dan alat
+  # pembersih, sekaligus menyebut nama webshell-nya sendiri.
+  # KODIM1016: 2.367 locker disebar ke hampir semua folder; 28 di antaranya
+  # menyebut 26 nama berkas — seluruhnya masih ada dan 16 di antaranya
+  # lolos semua aturan lain. disbintaladtniad gbrberita/.htaccess menyebut
+  # 403-px.php (berkasnya sudah tidak ada: jejak webshell yang dihapus).
+  # Locker tanpa daftar izin tidak dilaporkan per folder — yang dicari nama
+  # webshell-nya.
+  - id: htaccess-php-lockdown-allowlist
+    languages: [regex]
+    severity: ERROR
+    message: >-
+      .htaccess ini menolak semua berkas PHP di foldernya kecuali nama yang
+      disebut di baris ini — pola "locker" yang dipasang penyerang agar
+      webshell miliknya tetap dapat dipanggil sementara webshell pihak lain
+      dan alat pembersih diblokir. Nama yang diizinkan adalah webshell
+      (periksa berkas itu walau tidak dilaporkan aturan lain; bila sudah
+      tidak ada, berarti pernah ada). Locker biasanya disebar ke banyak
+      folder dan dipulihkan otomatis oleh skrip lain: hapus semuanya
+      sekaligus dan cari skrip yang menulis ulang .htaccess.
+    # Permutasi huruf dicocokkan peka huruf (?-i:…): tanpa itu "php" biasa
+    # ikut cocok dan pengerasan sah "tolak .php kecuali index.php" tertangkap.
+    pattern-regex: '(?is)<Files(Match)?[ \t]+"?[^">\n]*(\b(?-i:PHp|pHp|pHP|phP|PhP)\b|\bsuspected\b|\*\.(?-i:pH|Ph|PH)\*)[^">\n]*"?[ \t]*>.*?Deny[ \t]+from[ \t]+all.*?<FilesMatch[ \t]+"\^\(\K[^"()\n]+\)\$"'
+    metadata:
+      judul: ".htaccess locker penyerang yang hanya mengizinkan PHP tertentu"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [apache, htaccess, wordpress]
+      references:
+        - https://attack.mitre.org/techniques/T1505/003/
+        - https://attack.mitre.org/techniques/T1564/
+
+  # Salinan cadangan berekstensi aset (KODIM1016 colors-rtls.min.css berisi
+  # locker, server-sied-renders.min.js dan icon_twisteds.png berisi PHP)
+  # diperiksa mesin di Dart (xeria.static-asset-contains-server-code): letaknya
+  # di wp-admin/wp-includes dan namanya .min.*, jadi tidak pernah dikirim ke
+  # Opengrep.
+
+  # disbintaladtniad galeri/dirtyfrag/exp.c: exploit LPE kernel Linux hasil
+  # git clone ke folder galeri — clone butuh akses shell di server.
+  - id: exploit-source-local-privilege-escalation
+    languages: [regex]
+    paths:
+      include: ["*.c", "*.cc", "*.cpp"]
+    severity: ERROR
+    message: >-
+      Kode sumber ini adalah exploit eskalasi hak akses lokal: menjadikan
+      proses root (setuid(0), commit_creds, atau PwnKit/GCONV_PATH) lalu
+      membuka shell. Kode seperti ini tidak punya fungsi di folder web; yang
+      menaruhnya sudah memiliki akses menjalankan perintah di server dan
+      bersiap mengambil alih root, yang berdampak ke semua situs di server
+      yang sama. Tangani sebagai insiden tingkat server: laporkan ke
+      pengelola server, periksa log autentikasi dan proses, dan simpan
+      salinan folder ini sebagai bukti.
+    pattern-regex: '(?s)\A(?=.*?(\bsetuid[ \t]*\([ \t]*0[ \t]*\)|\bcommit_creds\b|\bprepare_kernel_cred\b|GCONV_PATH))(?=.*?("/bin/(ba)?sh"|\bpkexec\b))(?=.*?\b(exploit|LPE|privilege[ \t]+escalation|root[ \t]*shell|pwn\w*)\b).*?\K#[ \t]*include\b'
+    metadata:
+      judul: "Kode sumber exploit eskalasi hak akses lokal (root)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [c, linux]
+      references:
+        - https://attack.mitre.org/techniques/T1068/
+        - https://attack.mitre.org/techniques/T1588/005/

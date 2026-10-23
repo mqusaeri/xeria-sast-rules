@@ -1,0 +1,35 @@
+rules:
+- id: path-traversal-inside-zip-extraction
+  message: Archive entry names are joined to the extraction directory. Reject absolute/traversing names (for
+    example with filepath.IsLocal before joining), enforce destination containment, and prevent symlink traversal
+    before writing. Review this extraction path; lexical checks alone do not protect against existing filesystem
+    symlinks.
+  metadata:
+    cwe:
+    - 'CWE-22: Improper Limitation of a Pathname to a Restricted Directory (''Path Traversal'')'
+    source_rule_url: https://github.com/securego/gosec/issues/205
+    category: security
+    technology:
+    - go
+    confidence: LOW
+    owasp:
+    - A05:2017 - Broken Access Control
+    - A01:2021 - Broken Access Control
+    - A01:2025 - Broken Access Control
+    references:
+    - https://owasp.org/Top10/A01_2021-Broken_Access_Control
+    cwe2022-top25: true
+    cwe2021-top25: true
+    subcategory:
+    - audit
+    likelihood: LOW
+    impact: LOW
+  languages:
+  - go
+  severity: WARNING
+  patterns:
+  - pattern: "$READER, $ERR := zip.OpenReader($ARCHIVE)\n...\nfor _, $FILE := range $READER.File {\n  ...\n\
+      \  $DEST := filepath.Join($TARGET, $FILE.Name)\n  ...\n}"
+  - pattern-not: "$READER, $ERR := zip.OpenReader($ARCHIVE)\n...\nfor _, $FILE := range $READER.File {\n  ...\n\
+      \  if !filepath.IsLocal($FILE.Name) {\n    continue\n  }\n  ...\n  $DEST := filepath.Join($TARGET, $FILE.Name)\n\
+      \  ...\n}"

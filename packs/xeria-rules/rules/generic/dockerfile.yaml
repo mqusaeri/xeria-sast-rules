@@ -1,0 +1,28 @@
+# Dockerfile.
+rules:
+  - id: dockerfile-secret-in-build-arg
+    languages: [generic]
+    paths:
+      include: ["Dockerfile", "*.Dockerfile", "Dockerfile.*", "*.dockerfile"]
+    severity: WARNING
+    message: >-
+      Nilai rahasia diteruskan sebagai build argument (ARG). Nilai ARG ikut
+      tersimpan di riwayat image (docker history) dan dapat dibaca siapa pun
+      yang memegang image-nya. Gunakan BuildKit secret mount
+      (RUN --mount=type=secret) atau berikan rahasia saat container dijalankan.
+    # Nama rahasia saja; variabel yang memang dibundel ke kode klien
+    # (NEXT_PUBLIC_, VITE_, REACT_APP_, EXPO_PUBLIC_, PUBLIC_) dan alamat
+    # (_URL, _URI, _HOST, _PORT, _ENDPOINT) tidak dilaporkan.
+    pattern-regex: (?mi)^[ \t]*ARG[ \t]+(?!(?:NEXT_PUBLIC|VITE|REACT_APP|EXPO_PUBLIC|PUBLIC|MAPBOX)_)(?![A-Z0-9_]*_(?:URL|URI|HOST|PORT|ENDPOINT|DOMAIN|PATH)\b)[A-Z0-9_]*(?:SECRET|PASSWORD|PASSWD|PWD|TOKEN|API_?KEY|PRIVATE_?KEY|ACCESS_?KEY|CREDENTIAL)[A-Z0-9_]*\b
+    metadata:
+      judul: "Nilai rahasia diteruskan lewat ARG Dockerfile"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-538: Insertion of Sensitive Information into Externally-Accessible File or Directory"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [dockerfile, docker]
+      references:
+        - https://docs.docker.com/build/building/secrets/

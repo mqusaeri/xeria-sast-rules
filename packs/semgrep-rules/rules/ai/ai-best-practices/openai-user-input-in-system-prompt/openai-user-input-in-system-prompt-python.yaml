@@ -1,0 +1,44 @@
+rules:
+- id: openai-user-input-in-system-prompt-python
+  mode: taint
+  languages:
+  - python
+  severity: WARNING
+  message: Untrusted request data is used as a system/developer instruction in a openai SDK-shaped call.
+    Keep trusted instructions separate from data, and enforce tool authorization independently. Role separation
+    reduces instruction confusion but does not prove prompt-injection resistance.
+  metadata:
+    cwe: 'CWE-20: Improper Input Validation'
+    category: security
+    confidence: MEDIUM
+    subcategory:
+    - audit
+    likelihood: MEDIUM
+    impact: HIGH
+    technology:
+    - openai
+    references:
+    - https://platform.openai.com/docs
+  pattern-sources:
+  - pattern: request.args.get(...)
+  - pattern: request.form[...]
+  - pattern: request.form.get(...)
+  - pattern: request.json[...]
+  - pattern: request.json.get(...)
+  - pattern: request.data
+  - pattern: request.GET[...]
+  - pattern: request.GET.get(...)
+  - pattern: request.POST[...]
+  - pattern: request.POST.get(...)
+  pattern-sinks:
+  - patterns:
+    - pattern: '$CLIENT.chat.completions.create(..., messages=[..., {..., "role": "system", "content":
+        $SINK, ...}, ...], ...)'
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern: '$CLIENT.chat.completions.create(..., messages=[..., {..., "role": "developer", "content":
+        $SINK, ...}, ...], ...)'
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern: $CLIENT.responses.create(..., instructions=$SINK, ...)
+    - focus-metavariable: $SINK

@@ -1,0 +1,40 @@
+# Kunci enkripsi fungsi SQL (AES_ENCRYPT/AES_DECRYPT MySQL) yang ditulis
+# sebagai literal di dalam query di kode aplikasi, bahasa apa pun.
+#
+# Diukur di SIMRS-Khanza (Java dan PHP webapps) dan turunannya SIMRS
+# Soepraoen: kata sandi pengguna disimpan AES_ENCRYPT(?,'windi') dengan kunci
+# yang sama di ratusan query dan di setiap salinan aplikasi.
+rules:
+  - id: sql-aes-encrypt-literal-key
+    languages: [regex]
+    severity: WARNING
+    message: >-
+      Kunci enkripsi AES_ENCRYPT/AES_DECRYPT ditulis sebagai teks di dalam
+      query SQL di kode aplikasi (yang ditunjuk kemunculan pertamanya di berkas
+      ini). Kunci yang sama ada di setiap salinan aplikasi, sehingga siapa pun
+      yang dapat membaca basis data (cadangan,
+      replika, atau akun basis data aplikasi) dapat membuka seluruh nilai
+      terenkripsi — pada SIMRS-Khanza termasuk kata sandi seluruh pengguna.
+      Simpan kata sandi pengguna sebagai hash satu arah (bcrypt/Argon2), dan
+      untuk data lain ambil kunci dari luar kode, bukan literal di SQL.
+    paths:
+      include: ["*.java", "*.kt", "*.php", "*.cs", "*.py", "*.js", "*.ts"]
+    # Satu temuan per berkas, di kemunculan pertama: kuncinya sama di setiap
+    # query, dan SIMRS Soepraoen menulisnya 1.304 kali (sebagian besar di satu
+    # berkas setting/DlgUpdateUser.java). \A menambat ke awal berkas, \K
+    # memindahkan awal temuan ke query-nya.
+    pattern-regex: (?s)\A.*?\K\b(?i:(?:AES|DES)_(?:EN|DE)CRYPT)\s*\((?:[^()'"]|'[^']*'|\([^()]*\))*?,\s*'[^'\s]{1,64}'\s*\)
+    metadata:
+      judul: "Kunci AES_ENCRYPT tertulis di query SQL"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-321: Use of Hard-coded Cryptographic Key"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [mysql, jdbc, simrs-khanza, java, php]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+        - https://cwe.mitre.org/data/definitions/321.html
+

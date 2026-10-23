@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "id": "gitleaks",
+  "name": "Gitleaks default rules",
+  "version": "8.30.1.1",
+  "kind": "secret",
+  "format": "gitleaks-toml",
+  "createdAt": "2026-10-23",
+  "description": "222 aturan deteksi secret Gitleaks 8.30.1 dengan patch lokal XERIA; versi paket bukan versi binary engine.",
+  "source": {
+    "name": "Gitleaks",
+    "url": "https://github.com/gitleaks/gitleaks",
+    "revision": "v8.30.1 (83d9cd684c87d95d656c1458ef04895a7f1cbd8e)",
+    "license": "MIT",
+    "redistributable": true,
+    "notes": " [XERIA patch 2026-10-23: perbaikan deteksi/metadata/autofix; tidak identik dengan upstream. Lihat PATCHES.json dan tests/ di repository. Engine audit OpenGrep 1.29.0 / Gitleaks 8.30.1.]"
+  },
+  "files": [
+    {
+      "path": "upstream/LICENSE",
+      "sha256": "e3884b252b3bfc045e55be43a34d1e80da070bc6f804ac95bf4660e97d62ebc6",
+      "size": 1069
+    },
+    {
+      "path": "upstream/gitleaks.toml",
+      "sha256": "c21e4cae279d2dd6292fd30b204ed918c372804cf2af037687b32222c54ba990",
+      "size": 97802
+    }
+  ]
+}

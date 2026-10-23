@@ -1,0 +1,346 @@
+# Pengolahan data dan konfigurasi aplikasi Node.js: deserialisasi, prototype
+# pollution, mass assignment, XML, unggahan, dan kredensial basis data.
+rules:
+  - id: node-insecure-deserialization
+    languages:
+    - javascript
+    - typescript
+    severity: WARNING
+    message: Pustaka deserialisasi yang mendukung eksekusi fungsi digunakan. Bila isinya berasal dari sumber
+      tidak tepercaya, fungsi dapat dieksekusi di server. Tinjau sumber data dan gunakan format tanpa executable
+      semantics seperti JSON; nama method unserialize pada pustaka lain tidak cukup menjadi bukti risiko
+      ini.
+    pattern-either:
+    - pattern: require("node-serialize").unserialize(...)
+    - patterns:
+      - pattern: $S.unserialize(...)
+      - pattern-inside: 'const $S = require("node-serialize");
+
+          ...
+
+          '
+    - patterns:
+      - pattern: $S.unserialize(...)
+      - pattern-inside: 'import $S from "node-serialize";
+
+          ...
+
+          '
+    - patterns:
+      - pattern: $S.unserialize(...)
+      - pattern-inside: 'import * as $S from "node-serialize";
+
+          ...
+
+          '
+    - pattern: require("serialize-to-js").deserialize(...)
+    - patterns:
+      - pattern: $S.deserialize(...)
+      - pattern-inside: 'const $S = require("serialize-to-js");
+
+          ...
+
+          '
+    - patterns:
+      - pattern: $S.deserialize(...)
+      - pattern-inside: 'import $S from "serialize-to-js";
+
+          ...
+
+          '
+    - patterns:
+      - pattern: $S.deserialize(...)
+      - pattern-inside: 'import * as $S from "serialize-to-js";
+
+          ...
+
+          '
+    - pattern: require("funcster").deepDeserialize(...)
+    - patterns:
+      - pattern: $S.deepDeserialize(...)
+      - pattern-inside: 'const $S = require("funcster");
+
+          ...
+
+          '
+    - patterns:
+      - pattern: $S.deepDeserialize(...)
+      - pattern-inside: 'import $S from "funcster";
+
+          ...
+
+          '
+    - patterns:
+      - pattern: $S.deepDeserialize(...)
+      - pattern-inside: 'import * as $S from "funcster";
+
+          ...
+
+          '
+    metadata:
+      judul: Deserialisasi tidak aman yang dapat menjalankan fungsi (Node.js)
+      category: security
+      subcategory:
+      - audit
+      cwe: 'CWE-502: Deserialization of Untrusted Data'
+      owasp: A08:2021 - Software and Data Integrity Failures
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology:
+      - node.js
+      - node-serialize
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html
+
+  - id: node-prototype-pollution-merge
+    languages:
+    - javascript
+    - typescript
+    severity: WARNING
+    message: Objek request masuk ke operasi deep merge/set. Tinjau apakah versi pustaka dan wrapper yang
+      dipakai menolak __proto__, constructor, dan prototype pada semua level. Dampak prototype pollution
+      bergantung implementasi/versi dan gadget pemakai; finding ini meminta review, bukan konfirmasi eksploitasi
+      pada semua versi pustaka.
+    mode: taint
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern: $REQ.body
+        - pattern: $REQ.query
+      - metavariable-regex:
+          metavariable: $REQ
+          regex: ^(req|request|ctx\.request)$
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: _.merge($T, ..., $SRC, ...)
+        - pattern: _.mergeWith($T, ..., $SRC, ...)
+        - pattern: _.defaultsDeep($T, ..., $SRC, ...)
+        - pattern: lodash.merge($T, ..., $SRC, ...)
+        - pattern: merge($T, ..., $SRC, ...)
+        - pattern: deepmerge($T, $SRC, ...)
+        - pattern: $.extend(true, $T, ..., $SRC, ...)
+        - pattern: jQuery.extend(true, $T, ..., $SRC, ...)
+        - pattern: _.set($T, $SRC, ...)
+      - focus-metavariable: $SRC
+    metadata:
+      judul: Prototype pollution lewat deep merge objek request
+      category: security
+      subcategory:
+      - audit
+      cwe: 'CWE-1321: Improperly Controlled Modification of Object Prototype Attributes'
+      owasp: A08:2021 - Software and Data Integrity Failures
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology:
+      - node.js
+      - lodash
+      - express
+      references:
+      - https://portswigger.net/web-security/prototype-pollution
+
+  - id: node-mass-assignment-request-body
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Seluruh isi request body disimpan langsung ke model basis data. Penyerang
+      dapat menambahkan field yang tidak seharusnya bisa diubah, misalnya role,
+      isAdmin, atau saldo. Pilih field yang diizinkan secara eksplisit, atau
+      validasi dengan DTO/skema yang membuang field lain.
+    patterns:
+      - pattern-either:
+          - pattern: $MODEL.create($REQ.body, ...)
+          - pattern: $MODEL.insertMany($REQ.body, ...)
+          - pattern: new $MODEL($REQ.body)
+          - pattern: $MODEL.update($REQ.body, ...)
+          - pattern: $MODEL.findByIdAndUpdate($ID, $REQ.body, ...)
+          - pattern: $MODEL.updateOne($F, $REQ.body, ...)
+          - pattern: Object.assign($OBJ, $REQ.body)
+          - pattern: $REPO.save($REQ.body)
+          - pattern: '$PRISMA.$M.create({..., data: $REQ.body, ...})'
+          - pattern: '$PRISMA.$M.update({..., data: $REQ.body, ...})'
+      - metavariable-regex:
+          metavariable: $REQ
+          regex: ^(req|request|ctx\.request)$
+    metadata:
+      judul: "Mass assignment dari request body (Node.js)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [express, mongoose, sequelize, prisma, typeorm]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html
+
+  - id: nestjs-validation-pipe-without-whitelist
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      ValidationPipe dipasang tanpa whitelist: true. Properti yang tidak
+      didefinisikan di DTO tetap diteruskan ke service, sehingga field seperti
+      role atau isAdmin dapat ikut tersimpan (mass assignment). Aktifkan
+      whitelist: true, dan sebaiknya forbidNonWhitelisted: true.
+    patterns:
+      - pattern-either:
+          - pattern: new ValidationPipe()
+          - pattern: new ValidationPipe({...})
+      - pattern-not: 'new ValidationPipe({..., whitelist: true, ...})'
+    metadata:
+      judul: "ValidationPipe NestJS tanpa whitelist"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [nestjs, class-validator]
+      references:
+        - https://docs.nestjs.com/techniques/validation#stripping-properties
+
+  - id: typeorm-synchronize-enabled
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      TypeORM synchronize: true mengubah skema basis data otomatis mengikuti
+      entity setiap aplikasi dijalankan. Di produksi, perubahan entity dapat
+      menghapus kolom beserta datanya tanpa peringatan. Matikan synchronize dan
+      gunakan migration.
+    pattern-either:
+      - pattern: 'TypeOrmModule.forRoot({..., synchronize: true, ...})'
+      - pattern: 'new DataSource({..., synchronize: true, ...})'
+      - pattern: 'createConnection({..., synchronize: true, ...})'
+    metadata:
+      judul: "TypeORM synchronize aktif"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-1188: Initialization of a Resource with an Insecure Default"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: LOW
+      impact: HIGH
+      technology: [typeorm, nestjs]
+      references:
+        - https://typeorm.io/data-source-options#common-data-source-options
+
+  - id: node-xxe-external-entities
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Parser XML dikonfigurasi untuk memproses entitas eksternal (noent: true
+      atau opsi setara). XML dari penyerang dapat membaca berkas server atau
+      memicu permintaan ke jaringan internal (XXE). Hapus opsi tersebut.
+    pattern-either:
+      - pattern: '$LIB.parseXml($X, {..., noent: true, ...})'
+      - pattern: '$LIB.parseXmlString($X, {..., noent: true, ...})'
+      - pattern: '$LIB.parseXml($X, {..., dtdload: true, ...})'
+    metadata:
+      judul: "Parser XML memproses entitas eksternal (XXE)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-611: Improper Restriction of XML External Entity Reference"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [libxmljs, node.js, xml]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html
+
+  - id: node-upload-without-file-filter
+    languages:
+    - javascript
+    - typescript
+    severity: WARNING
+    message: Konfigurasi unggahan tidak mempunyai fileFilter atau batas fileSize yang eksplisit, atau callback
+      inline menerima semua berkas. Tinjau validasi isi berkas, batas ukuran, dan lokasi penyimpanan; MIME/ekstensi
+      dari klien saja tidak membuktikan isi aman. Filter helper dan batas global memerlukan review konfigurasi
+      aplikasi.
+    metadata:
+      judul: Konfigurasi filter atau batas ukuran unggahan perlu ditinjau
+      category: security
+      subcategory:
+      - audit
+      cwe: 'CWE-434: Unrestricted Upload of File with Dangerous Type'
+      owasp: A04:2021 - Insecure Design
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology:
+      - multer
+      - express
+      - nestjs
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
+    pattern-either:
+    - patterns:
+      - pattern: multer({...})
+      - pattern-not: 'multer({..., fileFilter: $FILTER, ...})'
+    - patterns:
+      - pattern: multer({...})
+      - pattern-not: 'multer({..., limits: {..., fileSize: $SIZE, ...}, ...})'
+    - pattern: 'multer({..., fileFilter: ($REQ, $FILE, $CB) => $CB(null, true), ...})'
+    - pattern: 'multer({..., fileFilter: ($REQ, $FILE, $CB) => { $CB(null, true); }, ...})'
+    - pattern: 'multer({..., fileFilter: function($REQ, $FILE, $CB) { $CB(null, true); }, ...})'
+    - pattern: 'multer({..., limits: {..., fileSize: 0, ...}, ...})'
+    - patterns:
+      - pattern: MulterModule.register({...})
+      - pattern-not: 'MulterModule.register({..., fileFilter: $FILTER, ...})'
+    - patterns:
+      - pattern: MulterModule.register({...})
+      - pattern-not: 'MulterModule.register({..., limits: {..., fileSize: $SIZE, ...}, ...})'
+    - pattern: 'MulterModule.register({..., fileFilter: ($REQ, $FILE, $CB) => $CB(null, true), ...})'
+    - pattern: 'MulterModule.register({..., fileFilter: ($REQ, $FILE, $CB) => { $CB(null, true); }, ...})'
+    - pattern: 'MulterModule.register({..., fileFilter: function($REQ, $FILE, $CB) { $CB(null, true); },
+        ...})'
+    - pattern: 'MulterModule.register({..., limits: {..., fileSize: 0, ...}, ...})'
+    - patterns:
+      - pattern: FileInterceptor($FIELD, {...})
+      - pattern-not: 'FileInterceptor($FIELD, {..., fileFilter: $FILTER, ...})'
+    - patterns:
+      - pattern: FileInterceptor($FIELD, {...})
+      - pattern-not: 'FileInterceptor($FIELD, {..., limits: {..., fileSize: $SIZE, ...}, ...})'
+    - pattern: 'FileInterceptor($FIELD, {..., fileFilter: ($REQ, $FILE, $CB) => $CB(null, true), ...})'
+    - pattern: 'FileInterceptor($FIELD, {..., fileFilter: ($REQ, $FILE, $CB) => { $CB(null, true); }, ...})'
+    - pattern: 'FileInterceptor($FIELD, {..., fileFilter: function($REQ, $FILE, $CB) { $CB(null, true);
+        }, ...})'
+    - pattern: 'FileInterceptor($FIELD, {..., limits: {..., fileSize: 0, ...}, ...})'
+
+  - id: node-hardcoded-database-password
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Password basis data ditulis langsung di kode. Siapa pun yang dapat membaca
+      kode memperoleh akses ke basis data. Baca kredensial dari environment
+      variable atau secret manager, lalu ganti password yang telanjur
+      tersimpan di repositori.
+    patterns:
+      - pattern-either:
+          - pattern: '$DB.createConnection({..., password: "$PW", ...})'
+          - pattern: '$DB.createPool({..., password: "$PW", ...})'
+          - pattern: 'new Pool({..., password: "$PW", ...})'
+          - pattern: 'new Client({..., password: "$PW", ...})'
+          - pattern: new Sequelize($NAME, $USER, "$PW", ...)
+          - pattern: 'TypeOrmModule.forRoot({..., password: "$PW", ...})'
+          - pattern: 'new DataSource({..., password: "$PW", ...})'
+          - pattern: 'knex({..., connection: {..., password: "$PW", ...}, ...})'
+      - metavariable-regex:
+          metavariable: $PW
+          regex: ^.{1,}$
+    metadata:
+      judul: "Password basis data tertulis di kode (Node.js)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [mysql, pg, sequelize, typeorm, knex, node.js]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html

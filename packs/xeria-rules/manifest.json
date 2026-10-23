@@ -1,0 +1,240 @@
+{
+  "schema": 1,
+  "id": "xeria-rules",
+  "name": "XERIA Rules",
+  "version": "0.10.6",
+  "kind": "rule",
+  "format": "semgrep-yaml",
+  "createdAt": "2026-10-23",
+  "description": "176 aturan keamanan XERIA dengan pesan Bahasa Indonesia dan katalog cakupan teknologi; termasuk regression perbaikan audit 2026-10-23.",
+  "source": {
+    "name": "XERIA",
+    "url": "",
+    "revision": "0.10.6",
+    "license": "Hak milik pemilik XERIA",
+    "redistributable": true,
+    "notes": "Rule custom XERIA. Regression positif/negatif disimpan di repository; pengujian terarah tidak menjamin coverage seluruh aplikasi. Tidak memakai sanitizer JDBC ResultSet tambahan dari paket tersarang 0.10.5."
+  },
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "6d0d9912a9f7e516a42df528a99ad4edb7a40fe003a01cab166261940d478c4b",
+      "size": 308
+    },
+    {
+      "path": "coverage/teknologi.json",
+      "sha256": "a53a7113ded4ce577dbb3e9dd627680dad1eb701ddd1a25fac9912d0d5327c51",
+      "size": 15079
+    },
+    {
+      "path": "rules/dart/flutter-data.yaml",
+      "sha256": "030eba3a824d9aade5109386b5bc90c0b124b75e4db63c2116ab051c5dd60869",
+      "size": 14255
+    },
+    {
+      "path": "rules/dart/flutter-tls.yaml",
+      "sha256": "d842df15d36d5f0a09ae7faa332697015d9896761a04f20e2e1c47f2997f620e",
+      "size": 4543
+    },
+    {
+      "path": "rules/generic/artefak-insiden.yaml",
+      "sha256": "ba5dcdaf5f3a984ce8b398f59b0217cd6197d3a4b545b66041614303068faa2b",
+      "size": 14928
+    },
+    {
+      "path": "rules/generic/credentials.yaml",
+      "sha256": "161c743256e5e45e3418a2f4f5dd78b9a6438ad4592c3dc3ef25c4b2decd1484",
+      "size": 3158
+    },
+    {
+      "path": "rules/generic/database-transport.yaml",
+      "sha256": "6f4baf7d4b6955f24a069f62892dec1adb8a40779df525a364243686d9c4dfca",
+      "size": 1666
+    },
+    {
+      "path": "rules/generic/dockerfile.yaml",
+      "sha256": "da1402b043071dd6f3fa93f55493ac790eb836f2c4422047d185bbc838b07501",
+      "size": 1439
+    },
+    {
+      "path": "rules/generic/html-transport.yaml",
+      "sha256": "85f85cd87b5eab396cf689d8ab6c84a254061c36d2eed0c49678324d4a98dea7",
+      "size": 1457
+    },
+    {
+      "path": "rules/generic/sql-crypto.yaml",
+      "sha256": "e24d11b29daa198f34a87708b8f5e4e9ff8813b09f4aadfd83056c0956c7647a",
+      "size": 2040
+    },
+    {
+      "path": "rules/go/gin-web.yaml",
+      "sha256": "71459901952fe4536c2846da2d93ce6475a3060a3bccfdf67dd2ded324ec8d64",
+      "size": 16021
+    },
+    {
+      "path": "rules/go/go-crypto.yaml",
+      "sha256": "8e172ed34c5be7fc736410b8d5110498e8c9e50b3c1c399a51088e366ae4b257",
+      "size": 5936
+    },
+    {
+      "path": "rules/infra/containers-gateway.yaml",
+      "sha256": "70f4155fb598552a824041a2bc0b553fd941a0852861529f687b521054dc0f96",
+      "size": 12628
+    },
+    {
+      "path": "rules/java/java-desktop.yaml",
+      "sha256": "c5affcbfd27371f77e2c60fb2a1f83c02b99826cfecef9cdab3526e4eea89586",
+      "size": 10567
+    },
+    {
+      "path": "rules/java/java-secrets.yaml",
+      "sha256": "87bdb97eae18b2853193369a6b03a3eea2c977abad15a2e49f10ba2cc308e343",
+      "size": 5771
+    },
+    {
+      "path": "rules/java/java-sql.yaml",
+      "sha256": "a3ce8edbb97bd5b8e778d1466da34bb000d32d17950cdc71351bdc26180afa68",
+      "size": 16288
+    },
+    {
+      "path": "rules/javascript/browser.yaml",
+      "sha256": "e43211edafa147a23e07a013dad9ce869bf8307a279e33df8df02eafd6f6eeb1",
+      "size": 24018
+    },
+    {
+      "path": "rules/javascript/jquery-dom.yaml",
+      "sha256": "0b101f88a8a1598252ba4dac9fb0d2722b07290bff84d3b93c1d0de10c5f1b51",
+      "size": 2913
+    },
+    {
+      "path": "rules/javascript/node-auth.yaml",
+      "sha256": "2b9d221da0a75d74e0d784b7db30a6055250511e35b5304e025cb83690cfd75e",
+      "size": 11037
+    },
+    {
+      "path": "rules/javascript/node-crypto.yaml",
+      "sha256": "47f9111091f665f387b08e2fe8095f81f6b77a8973c11f0ec0d36b4e3fc89402",
+      "size": 8355
+    },
+    {
+      "path": "rules/javascript/node-data.yaml",
+      "sha256": "f1849069d435f772e13e3413a503544da4d059c1469415494a94e1a57d288437",
+      "size": 13669
+    },
+    {
+      "path": "rules/javascript/node-files-network.yaml",
+      "sha256": "24df8cc704c740af4d8d744a190c7e71519f5f64ca4580ead16cc99c29aabcb5",
+      "size": 15709
+    },
+    {
+      "path": "rules/javascript/node-injection.yaml",
+      "sha256": "13b41d0f14e6fa7f5c3cb8fab057d97edaf7019720496689b17b41e03c0d250e",
+      "size": 16583
+    },
+    {
+      "path": "rules/javascript/react-native.yaml",
+      "sha256": "11ddde2e5a6879544c47b9f6eef05881a0296a9f3ff9873f7b8353479c77a149",
+      "size": 4461
+    },
+    {
+      "path": "rules/javascript/templates.yaml",
+      "sha256": "62588294f85103abed0ae1b879c13159548bcb49fcd1e50f6662b3a9d8cd720b",
+      "size": 4943
+    },
+    {
+      "path": "rules/mobile/platform-config.yaml",
+      "sha256": "43e08971eff450743d1f14e484a455a05069472fdbac7dd85fbe4fa175bd333f",
+      "size": 7319
+    },
+    {
+      "path": "rules/php/blade-templates.yaml",
+      "sha256": "15e408b843ad39ff04332593e3f3dc978e8d138a1c781c30d3a442a1de385138",
+      "size": 11850
+    },
+    {
+      "path": "rules/php/codeigniter.yaml",
+      "sha256": "4bd06ee81e8f3e16932e619bcb877f4b7168b83c17e6c8d0906b6c51a9193155",
+      "size": 8830
+    },
+    {
+      "path": "rules/php/laravel-data-authz.yaml",
+      "sha256": "f9fcb7a7ac130ff7bcdc4824a666dd68bfaeba35f5933612ff61b6d269a6ffa2",
+      "size": 7537
+    },
+    {
+      "path": "rules/php/laravel-injection.yaml",
+      "sha256": "cd24708e6e027557036c986aa812ec50c10cb05670319e3b4b967bd3ba2d4d4c",
+      "size": 2343
+    },
+    {
+      "path": "rules/php/php-backdoor.yaml",
+      "sha256": "6516d9d52bd8a8074ec7b20ce706f86a4752ed9dcada69a96e7f8500d204ad8d",
+      "size": 26532
+    },
+    {
+      "path": "rules/php/php-command-file.yaml",
+      "sha256": "a3eb27f2170a64177e941387ad68c495bd3ca607cbcc9e87b676597a43c7972d",
+      "size": 4391
+    },
+    {
+      "path": "rules/php/php-leftover-danger.yaml",
+      "sha256": "b0c076f71cbd76f992e70466af7b449f09508935fe38620b5e6a5d08c803035e",
+      "size": 2982
+    },
+    {
+      "path": "rules/php/php-native.yaml",
+      "sha256": "2f19cf3069485ac6f49b610cc1ec63c09fe31dcfe24e756d658ffe41a6686f31",
+      "size": 30330
+    },
+    {
+      "path": "rules/python/web-config.yaml",
+      "sha256": "d4df1e095e779f2cb9977d6221af622ab9e6ddae1a6be1aa058d6cf1298147fe",
+      "size": 6770
+    },
+    {
+      "path": "rules/security-boundaries/node-jwt-fail-open.yaml",
+      "sha256": "0121c1ae53f93dcb0e20ff676abd18365acecc212d9836a5f917216883527f3e",
+      "size": 1162
+    },
+    {
+      "path": "rules/security-boundaries/pyjwt-audience-disabled.yaml",
+      "sha256": "27f8fea6fe62cd71b9fa00fb074bd935e4285755a6e071fd713f602a735396fa",
+      "size": 1070
+    },
+    {
+      "path": "rules/security-boundaries/pyjwt-fail-open.yaml",
+      "sha256": "60bc3c2b1e517638beedcfaf87338df9a730e9447460bd8aa21b507e1a5e5001",
+      "size": 1365
+    },
+    {
+      "path": "rules/security-boundaries/pyjwt-issuer-disabled.yaml",
+      "sha256": "c8f287c57016d5bd7e2b6c9a702c0bd4ed6dffecd23f26338fbc61b80091b901",
+      "size": 1062
+    },
+    {
+      "path": "rules/security-boundaries/pytorch-unsafe-load.yaml",
+      "sha256": "72c89b7f3e1e65fff894f39d11b33f00332572222d887ef59e1816699f1cc42a",
+      "size": 1090
+    },
+    {
+      "path": "rules/security-boundaries/stripe-webhook-fail-open.yaml",
+      "sha256": "18703b3d5c3fc574fa0f63cab5e66d18a71f4ef592b73bf9e7847139b8cbc6e5",
+      "size": 1371
+    },
+    {
+      "path": "rules/security-boundaries/tarfile-fully-trusted.yaml",
+      "sha256": "d31eb02ad3c03c1f749294a12d4dd614f7c1193c68b2bd886850a1ffd5b2454b",
+      "size": 1522
+    },
+    {
+      "path": "rules/security-boundaries/transformers-remote-code.yaml",
+      "sha256": "2c2895c552e28d36e829ce3b6bc8946f9a80f115c17ae983fcb8d7c12d82f0a1",
+      "size": 1195
+    },
+    {
+      "path": "suppress/aturan-paket-lain.yaml",
+      "sha256": "4024242c2fe9229d10a610a6ca0eb557d2e27e0f49f6abda3b28deba6bdf3a65",
+      "size": 233
+    }
+  ]
+}

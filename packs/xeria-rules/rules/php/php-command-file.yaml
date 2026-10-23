@@ -1,0 +1,105 @@
+# PHP: perintah sistem dan penghapusan berkas yang dikendalikan input.
+#
+# Pengganti aturan audit semgrep exec-use dan unlink-use yang menandai setiap
+# argumen tidak tetap. Di SIMAWAS keduanya 5/5 temuan palsu: argumen sudah
+# dibungkus escapeshellarg, atau path dibuat server (storage_path + nama
+# berkas buatan sendiri). Aturan di bawah hanya melapor bila nilainya
+# berasal dari request dan belum dinetralkan.
+rules:
+  - id: php-command-injection-from-request
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Input request mencapai perintah sistem. escapeshellcmd tidak membatasi pilihan program atau argumen; untuk
+      program tetap, quote setiap argumen dengan escapeshellarg dan gunakan pemisah opsi -- jika didukung. Utamakan
+      API tanpa shell dengan executable tetap dan allowlist argumen. Encoding shell saja tidak memberikan otorisasi
+      eksekusi.
+    mode: taint
+    pattern-sources: &php-request-sources
+      - pattern-either:
+          - pattern: $_GET
+          - pattern: $_POST
+          - pattern: $_REQUEST
+          - pattern: $_COOKIE
+          - pattern: $_FILES
+          - pattern: request(...)
+          - patterns:
+              - pattern-either:
+                  - pattern: $REQUEST->input(...)
+                  - pattern: $REQUEST->get(...)
+                  - pattern: $REQUEST->query(...)
+                  - pattern: $REQUEST->post(...)
+                  - pattern: $REQUEST->all()
+                  - pattern: $REQUEST->file(...)->getClientOriginalName()
+              - metavariable-regex:
+                  metavariable: $REQUEST
+                  regex: ^\$(request|req|this->request)$
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: exec($CMD, ...)
+              - pattern: shell_exec($CMD)
+              - pattern: system($CMD, ...)
+              - pattern: passthru($CMD, ...)
+              - pattern: popen($CMD, ...)
+              - pattern: proc_open($CMD, ...)
+              - pattern: pcntl_exec($CMD, ...)
+              - pattern: Process::fromShellCommandline($CMD, ...)
+              - pattern: Process::run($CMD, ...)
+          - focus-metavariable: $CMD
+    pattern-sanitizers:
+      - pattern: escapeshellarg(...)
+      - pattern: intval(...)
+      - pattern: (int) $X
+    metadata:
+      judul: "Command Injection dari input request (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-78: Improper Neutralization of Special Elements used in an OS Command"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, laravel, codeigniter]
+      references:
+        - https://www.php.net/manual/en/function.escapeshellarg.php
+        - https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html
+
+  - id: php-file-delete-from-request
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Path berkas yang dihapus berasal dari input request. Dengan ../ penyerang
+      dapat menghapus berkas di luar folder unggahan — konfigurasi, .env, atau
+      berkas milik pengguna lain. Hapus berdasarkan record basis data yang
+      sudah diperiksa kepemilikannya, atau ambil nama berkasnya saja dengan
+      basename().
+    mode: taint
+    pattern-sources: *php-request-sources
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: unlink($PATH, ...)
+              - pattern: rmdir($PATH, ...)
+              - pattern: Storage::delete($PATH)
+              - pattern: Storage::disk(...)->delete($PATH)
+              - pattern: File::delete($PATH)
+              - pattern: File::deleteDirectory($PATH, ...)
+          - focus-metavariable: $PATH
+    pattern-sanitizers:
+      - pattern: basename(...)
+      - pattern: intval(...)
+      - pattern: (int) $X
+    metadata:
+      judul: "Penghapusan berkas dengan path dari request (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+      owasp: "A01:2021 - Broken Access Control"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [php, laravel, codeigniter]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
+        - https://owasp.org/www-community/attacks/Path_Traversal

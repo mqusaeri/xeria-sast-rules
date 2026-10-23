@@ -1,0 +1,33 @@
+rules:
+- id: xeria-stripe-webhook-verification-fail-open
+  languages:
+  - python
+  severity: WARNING
+  message: Fungsi mengembalikan True setelah verifikasi signature webhook Stripe gagal. Jangan memperlakukan
+    kegagalan signature sebagai hasil autentikasi yang berhasil; tolak event sebelum menjalankan aksi
+    bisnis. Periksa apakah pemanggil menggunakan True sebagai izin.
+  metadata:
+    judul: Kegagalan signature webhook menghasilkan izin
+    category: security
+    subcategory:
+    - audit
+    cwe: 'CWE-347: Improper Verification of Cryptographic Signature'
+    owasp: A10:2025 - Mishandling of Exceptional Conditions
+    confidence: MEDIUM
+    likelihood: MEDIUM
+    impact: HIGH
+    technology:
+    - python
+    - stripe
+    references:
+    - https://docs.stripe.com/webhooks/signature
+    tested-engine: OpenGrep 1.29.0
+    limitations: Nilai True/true belum diikat ke keputusan akses pada pemanggil. Periksa apakah boolean
+      berarti izin atau justru indikator error; rule ini review alur kegagalan, bukan bukti authorization
+      bypass.
+  patterns:
+  - pattern: "try:\n    ...\n    stripe.Webhook.construct_event(...)\n    ...\nexcept $ERROR:\n    ...\n\
+      \    return True\n"
+  - metavariable-regex:
+      metavariable: $ERROR
+      regex: ^(?:stripe\.(?:error\.)?SignatureVerificationError|SignatureVerificationError|Exception|BaseException)$

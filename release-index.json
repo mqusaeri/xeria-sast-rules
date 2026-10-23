@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "releaseDate": "2026-10-23",
+  "engines": {
+    "opengrep": "1.29.0",
+    "gitleaks": "8.30.1"
+  },
+  "totalRules": 1963,
+  "packages": [
+    {
+      "id": "semgrep-rules",
+      "version": "2026.10.23.1",
+      "file": "semgrep-rules-2026.10.23.1.zip",
+      "sha256": "f04e0f78d2eb805afc38e7a6230d9fa83c86a7d645d0c0c822d36ba35f340769",
+      "bytes": 1291184,
+      "ruleCount": 1462,
+      "upstreamRevision": "40b8c63f75dc7c22c8a77482d73bfb864b146f7e"
+    },
+    {
+      "id": "mobsfscan-rules",
+      "version": "1.0.1",
+      "file": "mobsfscan-rules-1.0.1.zip",
+      "sha256": "94e93dfeb9d1f48ec56bbc4d4c59284fd9722f72ce18942733ade66aeb245979",
+      "bytes": 45334,
+      "ruleCount": 103,
+      "upstreamRevision": "2659f2ac6d185f0c60ce2eb754f5f48b683f73fb"
+    },
+    {
+      "id": "gitleaks",
+      "version": "8.30.1.1",
+      "file": "gitleaks-8.30.1.1.zip",
+      "sha256": "fb1030f000169455e55cdeb4a383c2746a6e22f0df1987951359957f54a4e76c",
+      "bytes": 22713,
+      "ruleCount": 222,
+      "upstreamRevision": "v8.30.1 (83d9cd684c87d95d656c1458ef04895a7f1cbd8e)"
+    },
+    {
+      "id": "xeria-rules",
+      "version": "0.10.6",
+      "file": "xeria-rules-0.10.6.zip",
+      "sha256": "f649c553df48d87ef66da74f067a7ae73bb3287b11c01f20006270d4c98b0c58",
+      "bytes": 107949,
+      "ruleCount": 176,
+      "upstreamRevision": "0.10.6"
+    }
+  ]
+}

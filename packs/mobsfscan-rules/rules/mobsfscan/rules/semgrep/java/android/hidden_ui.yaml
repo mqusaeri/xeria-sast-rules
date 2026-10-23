@@ -1,0 +1,37 @@
+rules:
+- id: android_hidden_ui
+  patterns:
+  - pattern-either:
+    - pattern: '$X.setVisibility(View.GONE);
+
+        '
+    - pattern: '$V = View.GONE;
+
+        ...
+
+        $X.setVisibility($V);
+
+        '
+    - pattern: '$X.setVisibility(View.INVISIBLE);
+
+        '
+    - pattern: '$V = View.INVISIBLE;
+
+        ...
+
+        $X.setVisibility($V);
+
+        '
+  message: A view is hidden. This is normal UI behavior and is not a vulnerability by itself. If the view
+    holds sensitive data, consider clearing that data when it is no longer needed.
+  languages:
+  - java
+  severity: INFO
+  metadata:
+    cwe: cwe-919
+    owasp-mobile: m1
+    masvs: storage-7
+    reference: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05d-Testing-Data-Storage.md#checking-for-sensitive-data-disclosure-through-the-user-interface-mstg-storage-7
+    confidence: LOW
+    subcategory:
+    - audit

@@ -1,0 +1,422 @@
+# Injeksi di sisi server Node.js: SQL, NoSQL, perintah OS, kode, template, regex.
+#
+# Sumber input yang dipakai seluruh aturan di berkas ini:
+#   - objek request Express/Koa/Next.js API: req.query, req.body, req.params,
+#     req.headers, req.cookies, req.get(), req.header(), req.param(), ctx.query
+#   - parameter controller NestJS yang diberi decorator @Query/@Body/@Param/
+#     @Headers
+rules:
+  - id: express-sqli-string-query
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Query SQL disusun dengan menggabungkan data dari request (query, body,
+      params, headers, atau cookies). Penyerang dapat menyisipkan perintah SQL
+      untuk membaca, mengubah, atau menghapus data. Gunakan query berparameter,
+      misalnya db.query('SELECT * FROM u WHERE id = ?', [id]), atau binding
+      replacements/parameters dari ORM.
+    mode: taint
+    pattern-sources: &node-sources
+      # Objek request Express/Koa/Next.js API, dan konteks Elysia (ctx.query).
+      - patterns:
+          - pattern-either:
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.params
+              - pattern: $REQ.headers
+              - pattern: $REQ.cookies
+              - pattern: $REQ.get(...)
+              - pattern: $REQ.header(...)
+              - pattern: $REQ.param(...)
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: ^(req|request|ctx|ctx\.request|context)$
+      # Hono: c.req.query(), c.req.param(), c.req.json(), ...
+      - patterns:
+          - pattern-either:
+              - pattern: $C.req.query(...)
+              - pattern: $C.req.queries(...)
+              - pattern: $C.req.param(...)
+              - pattern: $C.req.header(...)
+              - pattern: $C.req.json()
+              - pattern: $C.req.text()
+              - pattern: $C.req.parseBody(...)
+              - pattern: $C.req.formData()
+              - pattern: $C.req.valid(...)
+      # Handler Elysia (dan fungsi lain) yang men-destructure input request:
+      # ({ query, body, params, headers, cookie }) => ...
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  ({..., $SRC, ...}) => $RET
+              - pattern-inside: |
+                  ({..., $SRC, ...}) => { ... }
+              - pattern-inside: |
+                  async ({..., $SRC, ...}) => $RET
+              - pattern-inside: |
+                  async ({..., $SRC, ...}) => { ... }
+              - pattern-inside: |
+                  function $F({..., $SRC, ...}) { ... }
+              - pattern-inside: |
+                  async function $F({..., $SRC, ...}) { ... }
+          - pattern: $SRC
+          - metavariable-regex:
+              metavariable: $SRC
+              regex: ^(query|body|params|headers|cookie)$
+      # Server function TanStack Start: createServerFn(...).handler(({ data }) => ...)
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  $FN.handler(async ({..., data, ...}) => { ... })
+              - pattern-inside: |
+                  $FN.handler(({..., data, ...}) => { ... })
+              - pattern-inside: |
+                  $FN.handler(async ({..., data, ...}) => $RET)
+          - pattern: data
+      # Parameter controller NestJS: @Query(), @Body(), @Param(), @Headers()
+      - patterns:
+          - pattern-inside: |
+              class $C { ... $M(..., @$D(...) $P: $T, ...) { ... } ... }
+          - focus-metavariable: $P
+          - metavariable-regex:
+              metavariable: $D
+              regex: ^(Query|Body|Param|Headers)$
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $DB.query($SQL, ...)
+              - pattern: $DB.execute($SQL, ...)
+              - pattern: $DB.raw($SQL, ...)
+              - pattern: $DB.whereRaw($SQL, ...)
+              - pattern: $DB.orderByRaw($SQL, ...)
+              - pattern: $DB.havingRaw($SQL, ...)
+              - pattern: $DB.$queryRawUnsafe($SQL, ...)
+              - pattern: $DB.$executeRawUnsafe($SQL, ...)
+              # Drizzle ORM: sql.raw() tidak melakukan binding parameter.
+              - pattern: sql.raw($SQL)
+              # where() TypeORM/Knex hanya berbahaya bila argumennya string
+              # SQL yang disusun; where(eq(kolom, nilai)) Drizzle dan
+              # where({ kolom: nilai }) mengikat nilai sebagai parameter.
+              - patterns:
+                  - pattern-either:
+                      - pattern: $QB.where($SQL, ...)
+                      - pattern: $QB.andWhere($SQL, ...)
+                      - pattern: $QB.orWhere($SQL, ...)
+                  - metavariable-pattern:
+                      metavariable: $SQL
+                      pattern-either:
+                        - pattern: "`...${$X}...`"
+                        - pattern: $A + $B
+          # Template sql`...${nilai}` Drizzle mengikat nilai sebagai parameter.
+          - pattern-not: $DB.execute(sql`...`, ...)
+          - pattern-not: $QB.where(sql`...`, ...)
+          # c.req.query() di Hono membaca input, bukan menjalankan query.
+          - pattern-not: $C.req.query(...)
+          - pattern-not: $C.request.query(...)
+          - focus-metavariable: $SQL
+    pattern-sanitizers: &numeric-sanitizers
+      - pattern: parseInt(...)
+      - pattern: parseFloat(...)
+      - pattern: Number(...)
+    metadata:
+      judul: "SQL Injection dari data request (Node.js)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: HIGH
+      impact: HIGH
+      technology: [express, nestjs, elysia, hono, tanstack-start, node.js, bun, mysql, pg, knex, prisma, sequelize, typeorm, drizzle]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+
+  - id: node-nosql-injection-mongo
+    languages:
+    - javascript
+    - typescript
+    severity: ERROR
+    message: 'Objek request diteruskan langsung sebagai filter query MongoDB. Penyerang dapat mengirim operator
+      seperti {"$ne": null} atau {"$where": "..."} untuk melewati login atau membaca seluruh data. Ambil
+      nilai skalar yang dibutuhkan, validasi tipenya (misalnya String(req.body.email)), atau aktifkan mongo-sanitize.'
+    mode: taint
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.headers
+        - pattern: $REQ.cookies
+        - pattern: $REQ.get(...)
+        - pattern: $REQ.header(...)
+        - pattern: $REQ.param(...)
+      - metavariable-regex:
+          metavariable: $REQ
+          regex: ^(req|request|ctx|ctx\.request|context)$
+    - patterns:
+      - pattern-either:
+        - pattern: $C.req.query(...)
+        - pattern: $C.req.queries(...)
+        - pattern: $C.req.param(...)
+        - pattern: $C.req.header(...)
+        - pattern: $C.req.json()
+        - pattern: $C.req.text()
+        - pattern: $C.req.parseBody(...)
+        - pattern: $C.req.formData()
+        - pattern: $C.req.valid(...)
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({..., $SRC, ...}) => $RET
+
+            '
+        - pattern-inside: '({..., $SRC, ...}) => { ... }
+
+            '
+        - pattern-inside: 'async ({..., $SRC, ...}) => $RET
+
+            '
+        - pattern-inside: 'async ({..., $SRC, ...}) => { ... }
+
+            '
+        - pattern-inside: 'function $F({..., $SRC, ...}) { ... }
+
+            '
+        - pattern-inside: 'async function $F({..., $SRC, ...}) { ... }
+
+            '
+      - pattern: $SRC
+      - metavariable-regex:
+          metavariable: $SRC
+          regex: ^(query|body|params|headers|cookie)$
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '$FN.handler(async ({..., data, ...}) => { ... })
+
+            '
+        - pattern-inside: '$FN.handler(({..., data, ...}) => { ... })
+
+            '
+        - pattern-inside: '$FN.handler(async ({..., data, ...}) => $RET)
+
+            '
+      - pattern: data
+    - patterns:
+      - pattern-inside: 'class $C { ... $M(..., @$D(...) $P: $T, ...) { ... } ... }
+
+          '
+      - focus-metavariable: $P
+      - metavariable-regex:
+          metavariable: $D
+          regex: ^(Query|Body|Param|Headers)$
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: $M.find($Q, ...)
+        - pattern: $M.findOne($Q, ...)
+        - pattern: $M.findOneAndUpdate($Q, ...)
+        - pattern: $M.updateOne($Q, ...)
+        - pattern: $M.updateMany($Q, ...)
+        - pattern: $M.deleteOne($Q, ...)
+        - pattern: $M.deleteMany($Q, ...)
+        - pattern: $M.countDocuments($Q, ...)
+      - pattern-not-inside: '$M.$F({..., $where: $W, ...}, ...)'
+      - focus-metavariable: $Q
+    pattern-sanitizers:
+    - pattern: String(...)
+    - pattern: mongoSanitize(...)
+    metadata:
+      judul: NoSQL Injection pada filter MongoDB
+      category: security
+      subcategory:
+      - vuln
+      cwe: 'CWE-943: Improper Neutralization of Special Elements in Data Query Logic'
+      owasp: A03:2021 - Injection
+      confidence: MEDIUM
+      likelihood: HIGH
+      impact: HIGH
+      technology:
+      - mongoose
+      - mongodb
+      - nosql
+      - express
+      - node.js
+      - elysia
+      - hono
+      - bun
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/NodeJS_Security_Cheat_Sheet.html
+
+  - id: node-nosql-where-operator
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Operator $where MongoDB menjalankan JavaScript di server basis data, dan
+      isinya disusun dari input pengguna. Penyerang dapat menjalankan kode
+      sembarang di basis data. Ganti $where dengan operator query biasa.
+    mode: taint
+    pattern-sources: *node-sources
+    pattern-sinks:
+      - patterns:
+          - pattern: |
+              {..., $where: $CODE, ...}
+          - focus-metavariable: $CODE
+    metadata:
+      judul: "Operator $where MongoDB disusun dari input pengguna"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-943: Improper Neutralization of Special Elements in Data Query Logic"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [mongoose, mongodb, nosql]
+      references:
+        - https://www.mongodb.com/docs/manual/reference/operator/query/where/
+
+  - id: node-command-injection-child-process
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Perintah sistem operasi dijalankan lewat shell dengan data dari request.
+      Penyerang dapat menambahkan perintah lain (misalnya "; rm -rf /") dan
+      menjalankannya di server. Gunakan execFile/spawn dengan argumen terpisah
+      tanpa opsi shell, dan batasi nilai input dengan daftar yang diizinkan.
+    mode: taint
+    pattern-sources: *node-sources
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $CP.exec($CMD, ...)
+              - pattern: $CP.execSync($CMD, ...)
+              - pattern: exec($CMD, ...)
+              - pattern: execSync($CMD, ...)
+              - pattern: execaCommand($CMD, ...)
+              - pattern: shell.exec($CMD, ...)
+          - focus-metavariable: $CMD
+      - patterns:
+          - pattern-either:
+              - pattern: "spawn($CMD, $ARGS, {..., shell: true, ...})"
+              - pattern: "$CP.spawn($CMD, $ARGS, {..., shell: true, ...})"
+              - pattern: "spawnSync($CMD, $ARGS, {..., shell: true, ...})"
+          - focus-metavariable: [$CMD, $ARGS]
+    metadata:
+      judul: "Command Injection lewat child_process (Node.js)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-78: Improper Neutralization of Special Elements used in an OS Command"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: HIGH
+      impact: HIGH
+      technology: [node.js, express, nestjs, elysia, hono, bun]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html
+
+  - id: node-code-injection-eval
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Kode JavaScript dieksekusi dari input pengguna (eval, new Function,
+      setTimeout/setInterval dengan string, atau modul vm). Penyerang dapat
+      menjalankan kode sembarang di server dengan hak aplikasi. Jangan pernah
+      mengeksekusi input; gunakan JSON.parse untuk data atau pemetaan nilai
+      yang diizinkan.
+    mode: taint
+    pattern-sources: *node-sources
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: eval($CODE)
+              - pattern: new Function(..., $CODE)
+              - pattern: Function(..., $CODE)
+              - pattern: setTimeout($CODE, ...)
+              - pattern: setInterval($CODE, ...)
+              - pattern: $VM.runInNewContext($CODE, ...)
+              - pattern: $VM.runInThisContext($CODE, ...)
+              - pattern: $VM.runInContext($CODE, ...)
+              - pattern: new $VM.Script($CODE, ...)
+          - focus-metavariable: $CODE
+    metadata:
+      judul: "Code Injection dari input pengguna (Node.js)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [node.js, express, nestjs, elysia, hono, bun]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/NodeJS_Security_Cheat_Sheet.html
+
+  - id: node-ssti-template-from-input
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Isi template dirender dari input pengguna. Mesin template seperti EJS,
+      Pug, Handlebars, dan Nunjucks dapat mengeksekusi kode dari dalam
+      template, sehingga penyerang dapat menjalankan kode di server
+      (Server-Side Template Injection). Simpan template di berkas aplikasi dan
+      kirim input hanya sebagai data.
+    mode: taint
+    pattern-sources: *node-sources
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: ejs.render($TPL, ...)
+              - pattern: ejs.compile($TPL, ...)
+              - pattern: pug.render($TPL, ...)
+              - pattern: pug.compile($TPL, ...)
+              - pattern: Handlebars.compile($TPL, ...)
+              - pattern: handlebars.compile($TPL, ...)
+              - pattern: nunjucks.renderString($TPL, ...)
+              - pattern: $ENV.renderString($TPL, ...)
+              - pattern: _.template($TPL, ...)
+              - pattern: lodash.template($TPL, ...)
+          - focus-metavariable: $TPL
+    metadata:
+      judul: "Server-Side Template Injection (Node.js)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [node.js, express, ejs, pug, handlebars, nunjucks, lodash, elysia, hono, bun]
+      references:
+        - https://portswigger.net/web-security/server-side-template-injection
+
+  - id: node-regexp-from-input
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Ekspresi reguler dibuat dari input pengguna. Pola yang sengaja dirancang
+      (misalnya "(a+)+$") membuat pencocokan berjalan sangat lama dan
+      menghentikan event loop Node.js (ReDoS). Escape input sebelum dipakai di
+      RegExp, atau batasi panjang dan karakternya.
+    mode: taint
+    pattern-sources: *node-sources
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: new RegExp($RE, ...)
+              - pattern: RegExp($RE, ...)
+          - focus-metavariable: $RE
+    pattern-sanitizers:
+      - pattern: escapeRegExp(...)
+      - pattern: _.escapeRegExp(...)
+      - pattern: escapeStringRegexp(...)
+    metadata:
+      judul: "Ekspresi reguler dari input pengguna (ReDoS)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-1333: Inefficient Regular Expression Complexity"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [node.js, express, elysia, hono, bun]
+      references:
+        - https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS

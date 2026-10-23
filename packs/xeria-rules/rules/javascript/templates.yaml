@@ -1,0 +1,132 @@
+# Keluaran tanpa escaping di berkas template dan komponen front-end.
+#
+# Template EJS, Handlebars, Pug, dan bagian <template> Vue tidak diurai
+# Opengrep sebagai kode, jadi aturannya berbasis pola teks (generic).
+rules:
+  - id: ejs-unescaped-output
+    languages: [generic]
+    paths:
+      include: ["*.ejs"]
+    severity: WARNING
+    message: >-
+      Tag <%- di EJS menulis nilai tanpa escaping HTML. Bila nilainya berasal dari
+      pengguna atau basis data, penyerang dapat menyisipkan skrip (XSS). Gunakan
+      <%= untuk teks; <%- hanya untuk HTML tepercaya seperti include.
+    patterns:
+      - pattern-regex: <%-\s*[^%]+%>
+      - pattern-not-regex: <%-\s*include\b
+    metadata:
+      judul: "Keluaran EJS tanpa escaping HTML"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [ejs, express]
+      references:
+        - https://ejs.co/#docs
+
+  - id: handlebars-triple-stash
+    languages: [generic]
+    paths:
+      include: ["*.hbs", "*.handlebars"]
+    severity: WARNING
+    message: >-
+      Kurung kurawal tiga {{{ }}} di Handlebars menulis nilai tanpa escaping
+      HTML. Bila nilainya berasal dari pengguna, penyerang dapat menyisipkan
+      skrip (XSS). Gunakan {{ }} biasa.
+    pattern-regex: \{\{\{\s*[^}]+\}\}\}
+    metadata:
+      judul: "Keluaran Handlebars tanpa escaping HTML"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [handlebars, express]
+      references:
+        - https://handlebarsjs.com/guide/#html-escaping
+
+  - id: pug-unescaped-output
+    languages: [generic]
+    paths:
+      include: ["*.pug", "*.jade"]
+    severity: WARNING
+    message: >-
+      Interpolasi !{ } atau atribut != di Pug menulis nilai tanpa escaping HTML.
+      Bila nilainya berasal dari pengguna, penyerang dapat menyisipkan skrip
+      (XSS). Gunakan #{ } atau = biasa.
+    pattern-either:
+      - pattern-regex: '!\{[^}]+\}'
+      - pattern-regex: '^\s*[\w.#-]*!=\s*\S'
+    metadata:
+      judul: "Keluaran Pug tanpa escaping HTML"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [pug, express]
+      references:
+        - https://pugjs.org/language/interpolation.html#string-interpolation-unescaped
+
+  - id: vue-v-html-unsanitized
+    languages: [generic]
+    paths:
+      include: ["*.vue"]
+    severity: WARNING
+    message: >-
+      Direktif v-html menampilkan HTML mentah tanpa escaping Vue. Bila isinya
+      berasal dari pengguna atau API, penyerang dapat menyisipkan skrip (XSS).
+      Sanitasi dengan DOMPurify.sanitize terlebih dahulu, atau tampilkan dengan
+      {{ }} sebagai teks.
+    patterns:
+      - pattern-regex: v-html\s*=\s*"[^"]+"
+      - pattern-not-regex: v-html\s*=\s*"\s*(\$?sanitize\w*|DOMPurify\.sanitize|purify\w*)\s*\(
+    metadata:
+      judul: "v-html menampilkan HTML mentah (Vue)"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [vue, nuxt]
+      references:
+        - https://vuejs.org/guide/best-practices/security.html#html-injection
+
+  - id: angular-bypass-security-trust
+    languages: [typescript]
+    severity: WARNING
+    message: >-
+      DomSanitizer.bypassSecurityTrust* mematikan sanitasi bawaan Angular untuk
+      nilai ini. Bila nilainya berasal dari pengguna atau API, penyerang dapat
+      menyisipkan skrip atau URL javascript: (XSS). Hindari bypass; bila memang
+      perlu, sanitasi nilainya dengan DomSanitizer.sanitize lebih dulu.
+    patterns:
+      - pattern-either:
+          - pattern: $S.bypassSecurityTrustHtml($V)
+          - pattern: $S.bypassSecurityTrustScript($V)
+          - pattern: $S.bypassSecurityTrustUrl($V)
+          - pattern: $S.bypassSecurityTrustResourceUrl($V)
+          - pattern: $S.bypassSecurityTrustStyle($V)
+      - pattern-not: $S.$BYPASS("...")
+    metadata:
+      judul: "Sanitasi Angular dimatikan lewat bypassSecurityTrust"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [angular]
+      references:
+        - https://angular.dev/best-practices/security#preventing-cross-site-scripting-xss

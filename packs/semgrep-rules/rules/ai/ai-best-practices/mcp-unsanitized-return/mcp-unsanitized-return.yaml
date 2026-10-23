@@ -1,0 +1,32 @@
+rules:
+- id: mcp-unsanitized-return-python
+  mode: taint
+  languages:
+  - python
+  severity: INFO
+  message: External HTTP content is returned by an MCP tool. Treat it as untrusted data and enforce authorization
+    and tool policy independently of model instructions. HTML escaping or whitespace stripping does not
+    neutralize prompt injection. This review finding identifies a trust boundary, not a demonstrated exploit.
+  metadata:
+    cwe: 'CWE-20: Improper Input Validation'
+    category: security
+    confidence: MEDIUM
+    subcategory:
+    - audit
+    likelihood: MEDIUM
+    impact: MEDIUM
+    technology:
+    - mcp
+    references:
+    - https://modelcontextprotocol.io/specification/draft/basic/security_best_practices
+  pattern-sources:
+  - pattern: requests.get(...)
+  - pattern: requests.post(...)
+  - pattern: urllib.request.urlopen(...)
+  - pattern: httpx.get(...)
+  - pattern: httpx.post(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-inside: "@$SERVER.tool(...)\ndef $FUNC(...):\n    ...\n"
+    - pattern: return $SINK
+    - focus-metavariable: $SINK

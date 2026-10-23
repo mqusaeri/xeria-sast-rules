@@ -1,0 +1,68 @@
+# PHP: review operasi destruktif bersyarat waktu dan skrip diagnostik.
+# Pola statis ini bukan bukti niat jahat atau endpoint publik tanpa otorisasi.
+rules:
+  - id: php-time-bomb-destructive-query
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Operasi DROP/TRUNCATE dikendalikan kondisi waktu. Tinjau apakah ini maintenance yang sah atau logic bomb:
+      periksa otorisasi pemicu, pembatasan tabel/database, audit trail dan cadangan. Pola waktu saja tidak membuktikan
+      niat jahat; jangan menghapus job produksi sebelum memverifikasi tujuan serta dampaknya.
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              if (<... time() ...>) { ... }
+          - pattern-inside: |
+              if (<... date(...) ...>) { ... }
+          - pattern-inside: |
+              if (<... strtotime(...) ...>) { ... }
+      - pattern-either:
+          - pattern: $C->query($SQL)
+          - pattern: $C->exec($SQL)
+          - pattern: mysqli_query($C, $SQL)
+          - pattern: pg_query($C, $SQL)
+      - metavariable-regex:
+          metavariable: $SQL
+          regex: (?is).*\b(drop\s+(database|schema|table)|truncate\s+table)\b.*
+    metadata:
+      judul: "Operasi database destruktif bersyarat waktu (PHP)"
+      category: security
+      subcategory:
+        - audit
+      cwe: "CWE-511: Logic/Time Bomb"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: MEDIUM
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php]
+      references:
+        - https://cwe.mitre.org/data/definitions/511.html
+
+  - id: php-leftover-diagnostic-script-dumps-database
+    languages: [regex]
+    paths:
+      include: ["cek*.php", "debug*.php", "test*.php", "tes_*.php", "check*.php", "coba*.php", "dump*.php"]
+      exclude: ["*/tests/*", "*/test/*", "*Test.php"]
+    severity: WARNING
+    message: >-
+      Berkas bernama diagnostik berisi koneksi database dan keluaran data. Periksa apakah dapat diakses lewat web
+      dan apakah output mengungkap informasi sensitif. session_start, membaca $_SESSION, atau memanggil auth() saja
+      tidak membuktikan akses dibatasi. Jalankan diagnosis melalui CLI atau guard otorisasi yang menolak akses sebelum
+      output. Ini kandidat review, bukan bukti endpoint publik tanpa login.
+    # Review koneksi dan output; keberadaan token auth bukan bukti enforcement.
+    pattern-regex: 
+      (?s)\A(?=.*\b(echo|print_r|var_dump|json_encode)\b).*?\K(?:\bnew\s+(?:PDO|mysqli)\s*\(|\bmysqli_connect\s*\()
+    metadata:
+      judul: "Skrip diagnostik tertinggal mencetak isi basis data (PHP)"
+      category: security
+      subcategory:
+        - audit
+      cwe: "CWE-489: Active Debug Code"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: LOW
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [php]
+      references:
+        - https://cwe.mitre.org/data/definitions/489.html
+        - https://owasp.org/Top10/A05_2021-Security_Misconfiguration/

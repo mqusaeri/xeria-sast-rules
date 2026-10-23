@@ -1,0 +1,130 @@
+# Keluaran view Blade yang lolos dari escaping.
+#
+# Blade {{ }} meng-escape HTML dengan htmlspecialchars. Itu aman untuk teks
+# biasa, tetapi tidak untuk konteks JavaScript: browser mengembalikan
+# &#039; menjadi ' di atribut onclick sebelum skripnya dijalankan. Diukur di
+# SIMAWAS: nama unit dan nama berkas masuk ke onclick="f('{{ … }}')".
+rules:
+  - id: blade-echo-in-js-event-handler
+    languages: [regex]
+    paths:
+      include: ["*.blade.php"]
+    severity: WARNING
+    message: >-
+      Nilai Blade {{ }} ditaruh di dalam string JavaScript pada atribut event
+      (onclick, onchange, …). Escaping HTML Blade mengubah ' menjadi &#039;,
+      tetapi browser mengembalikannya menjadi ' sebelum skrip dijalankan,
+      sehingga nilai berisi ');alert(document.cookie);// keluar dari string
+      dan dieksekusi (XSS). Kirim nilainya lewat atribut data-* lalu baca
+      dengan dataset/.data(), atau gunakan @js($nilai) / Js::from($nilai).
+    # Satu pola utuh dari awal atribut event: string berkutip tunggal yang
+    # hanya berisi sisipan aman dilewati, lalu dilaporkan string pertama yang
+    # memuat sisipan tidak aman. Sisipan {{ }} dibaca utuh karena ekspresi PHP
+    # di dalamnya boleh memuat kutip ('STAF UMUM').
+    #
+    # Sisipan aman di konteks JavaScript: sudah di-escape untuk JS
+    # (addslashes, json_encode, Js::from), angka dan ID, URL buatan
+    # route/asset, tanggal terformat, dan path berkas buatan server (*_file).
+    # Aturan ini hanya untuk sisipan field teks (nama, perihal, nomor, jenis)
+    # dan parameter request yang dikenal ($year, $search, $source); sisanya
+    # ditangani blade-echo-in-js-event-handler-review.
+    # Disusun dan diuji dengan contoh di tools/regex_blade_event.dart.
+    pattern-regex: >-
+      \bon[a-z]+\s*=\s*"(?:[^"'{]|\{(?!\{)|\{\{(?:[^}]|\}(?!\}))*\}\}|'(?:[^'"{]|\{(?!\{)|(?:\{\{\s*(?:(?:addslashes|basename|json_encode|http_build_query|urlencode|rawurlencode|Js::from|e\s*\(\s*json_encode|route|url|asset|secure_asset|csrf_token|intval|floatval|count|number_format|date|now|md5|sha1)\b(?:[^}]|\}(?!\}))*?|\((?:int|float)\)(?:[^}]|\}(?!\}))*?|\$loop->(?:[^}]|\}(?!\}))*?|(?:[^}]|\}(?!\}))*?(?:->id|\['id'\]|_id|Id|->count\(\)|->format\([^)]*\)|->translatedFormat\([^)]*\)|->diffForHumans\(\)|->year|->month|->day|->timestamp|->getKey\(\)|_file|file_path|->path)|\$(?:i|j|idx|index|key|no)|(?:[^}]|\}(?!\}))*?\?\s*asset\((?:[^}]|\}(?!\}))*?)\s*\}\}|\{\{(?!--)(?!(?:[^}]|\}(?!\}))*?(?:->|\[['"])(?:name|nama|title|judul|subject|perihal|message|pesan|description|deskripsi|keterangan|catatan|notes?|content|isi|summary|ringkasan|sender|pengirim|recipient|penerima|file_name|filename|original_name|comment|komentar|\w*number|nomor\w*|\w*_type|address|alamat|email|username)\b|\s*\$(?:year|tahun|search|q|keyword|kata_kunci|source|tab|type|filter|sort|query|periodType|reportType|period_type|report_type|bulan|month|status|redirect|return_url|next|back)\s*\}\})(?:[^}]|\}(?!\}))+?\}\}))*')*'(?:[^'"{]|\{(?!\{)|(?:\{\{\s*(?:(?:addslashes|basename|json_encode|http_build_query|urlencode|rawurlencode|Js::from|e\s*\(\s*json_encode|route|url|asset|secure_asset|csrf_token|intval|floatval|count|number_format|date|now|md5|sha1)\b(?:[^}]|\}(?!\}))*?|\((?:int|float)\)(?:[^}]|\}(?!\}))*?|\$loop->(?:[^}]|\}(?!\}))*?|(?:[^}]|\}(?!\}))*?(?:->id|\['id'\]|_id|Id|->count\(\)|->format\([^)]*\)|->translatedFormat\([^)]*\)|->diffForHumans\(\)|->year|->month|->day|->timestamp|->getKey\(\)|_file|file_path|->path)|\$(?:i|j|idx|index|key|no)|(?:[^}]|\}(?!\}))*?\?\s*asset\((?:[^}]|\}(?!\}))*?)\s*\}\}|\{\{(?!--)(?!(?:[^}]|\}(?!\}))*?(?:->|\[['"])(?:name|nama|title|judul|subject|perihal|message|pesan|description|deskripsi|keterangan|catatan|notes?|content|isi|summary|ringkasan|sender|pengirim|recipient|penerima|file_name|filename|original_name|comment|komentar|\w*number|nomor\w*|\w*_type|address|alamat|email|username)\b|\s*\$(?:year|tahun|search|q|keyword|kata_kunci|source|tab|type|filter|sort|query|periodType|reportType|period_type|report_type|bulan|month|status|redirect|return_url|next|back)\s*\}\})(?:[^}]|\}(?!\}))+?\}\}))*\{\{(?!--)(?!\s*(?:(?:addslashes|basename|json_encode|http_build_query|urlencode|rawurlencode|Js::from|e\s*\(\s*json_encode|route|url|asset|secure_asset|csrf_token|intval|floatval|count|number_format|date|now|md5|sha1)\b(?:[^}]|\}(?!\}))*?|\((?:int|float)\)(?:[^}]|\}(?!\}))*?|\$loop->(?:[^}]|\}(?!\}))*?|(?:[^}]|\}(?!\}))*?(?:->id|\['id'\]|_id|Id|->count\(\)|->format\([^)]*\)|->translatedFormat\([^)]*\)|->diffForHumans\(\)|->year|->month|->day|->timestamp|->getKey\(\)|_file|file_path|->path)|\$(?:i|j|idx|index|key|no)|(?:[^}]|\}(?!\}))*?\?\s*asset\((?:[^}]|\}(?!\}))*?)\s*\}\})(?=(?:[^}]|\}(?!\}))*?(?:->|\[['"])(?:name|nama|title|judul|subject|perihal|message|pesan|description|deskripsi|keterangan|catatan|notes?|content|isi|summary|ringkasan|sender|pengirim|recipient|penerima|file_name|filename|original_name|comment|komentar|\w*number|nomor\w*|\w*_type|address|alamat|email|username)\b|\s*\$(?:year|tahun|search|q|keyword|kata_kunci|source|tab|type|filter|sort|query|periodType|reportType|period_type|report_type|bulan|month|status|redirect|return_url|next|back)\s*\}\})(?:[^}]|\}(?!\}))+?\}\}
+    metadata:
+      judul: "Nilai Blade di dalam atribut event JavaScript"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [laravel, blade, php]
+      references:
+        - https://laravel.com/docs/blade#rendering-json
+        - https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html#output-encoding-for-javascript-contexts
+
+  - id: blade-echo-in-js-event-handler-review
+    languages: [regex]
+    paths:
+      include: ["*.blade.php"]
+    severity: WARNING
+    message: >-
+      Nilai Blade {{ }} ditaruh di dalam string JavaScript pada atribut event.
+      Asal nilainya tidak bisa dipastikan dari view — kode, status, warna, atau
+      variabel perulangan. Bila nilainya pernah diisi pengguna atau berasal
+      dari parameter request, escaping HTML Blade tidak melindungi konteks ini
+      (browser mengembalikan &#039; menjadi ' sebelum skrip dijalankan). Tinjau
+      asalnya; lebih aman kirim lewat atribut data-* atau @js($nilai).
+    # Pasangan aturan blade-echo-in-js-event-handler untuk sisipan yang bukan
+    # field teks maupun parameter request yang dikenal. Diukur di SIMAWAS:
+    # $bid dari perulangan statis, $k['color'] dari konfigurasi, dan kode
+    # akun hasil impor — sebagian aman, sebagian tidak.
+    # Disusun dan diuji dengan contoh di tools/regex_blade_event.dart.
+    pattern-regex: >-
+      \bon[a-z]+\s*=\s*"(?:[^"'{]|\{(?!\{)|\{\{(?:[^}]|\}(?!\}))*\}\}|'(?:[^'"{]|\{(?!\{)|\{\{\s*(?:(?:addslashes|basename|json_encode|http_build_query|urlencode|rawurlencode|Js::from|e\s*\(\s*json_encode|route|url|asset|secure_asset|csrf_token|intval|floatval|count|number_format|date|now|md5|sha1)\b(?:[^}]|\}(?!\}))*?|\((?:int|float)\)(?:[^}]|\}(?!\}))*?|\$loop->(?:[^}]|\}(?!\}))*?|(?:[^}]|\}(?!\}))*?(?:->id|\['id'\]|_id|Id|->count\(\)|->format\([^)]*\)|->translatedFormat\([^)]*\)|->diffForHumans\(\)|->year|->month|->day|->timestamp|->getKey\(\)|_file|file_path|->path)|\$(?:i|j|idx|index|key|no)|(?:[^}]|\}(?!\}))*?\?\s*asset\((?:[^}]|\}(?!\}))*?)\s*\}\})*')*'(?:[^'"{]|\{(?!\{)|\{\{\s*(?:(?:addslashes|basename|json_encode|http_build_query|urlencode|rawurlencode|Js::from|e\s*\(\s*json_encode|route|url|asset|secure_asset|csrf_token|intval|floatval|count|number_format|date|now|md5|sha1)\b(?:[^}]|\}(?!\}))*?|\((?:int|float)\)(?:[^}]|\}(?!\}))*?|\$loop->(?:[^}]|\}(?!\}))*?|(?:[^}]|\}(?!\}))*?(?:->id|\['id'\]|_id|Id|->count\(\)|->format\([^)]*\)|->translatedFormat\([^)]*\)|->diffForHumans\(\)|->year|->month|->day|->timestamp|->getKey\(\)|_file|file_path|->path)|\$(?:i|j|idx|index|key|no)|(?:[^}]|\}(?!\}))*?\?\s*asset\((?:[^}]|\}(?!\}))*?)\s*\}\})*\{\{(?!--)(?!\s*(?:(?:addslashes|basename|json_encode|http_build_query|urlencode|rawurlencode|Js::from|e\s*\(\s*json_encode|route|url|asset|secure_asset|csrf_token|intval|floatval|count|number_format|date|now|md5|sha1)\b(?:[^}]|\}(?!\}))*?|\((?:int|float)\)(?:[^}]|\}(?!\}))*?|\$loop->(?:[^}]|\}(?!\}))*?|(?:[^}]|\}(?!\}))*?(?:->id|\['id'\]|_id|Id|->count\(\)|->format\([^)]*\)|->translatedFormat\([^)]*\)|->diffForHumans\(\)|->year|->month|->day|->timestamp|->getKey\(\)|_file|file_path|->path)|\$(?:i|j|idx|index|key|no)|(?:[^}]|\}(?!\}))*?\?\s*asset\((?:[^}]|\}(?!\}))*?)\s*\}\})(?!(?:[^}]|\}(?!\}))*?(?:->|\[['"])(?:name|nama|title|judul|subject|perihal|message|pesan|description|deskripsi|keterangan|catatan|notes?|content|isi|summary|ringkasan|sender|pengirim|recipient|penerima|file_name|filename|original_name|comment|komentar|\w*number|nomor\w*|\w*_type|address|alamat|email|username)\b|\s*\$(?:year|tahun|search|q|keyword|kata_kunci|source|tab|type|filter|sort|query|periodType|reportType|period_type|report_type|bulan|month|status|redirect|return_url|next|back)\s*\}\})(?:[^}]|\}(?!\}))+?\}\}
+    metadata:
+      judul: "Nilai Blade di dalam atribut event JavaScript (perlu ditinjau)"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: LOW
+      likelihood: LOW
+      impact: HIGH
+      technology: [laravel, blade, php]
+      references:
+        - https://laravel.com/docs/blade#rendering-json
+        - https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html#output-encoding-for-javascript-contexts
+  - id: blade-raw-json-encode-in-html
+    languages: [regex]
+    paths:
+      include: ["*.blade.php"]
+    severity: WARNING
+    message: >-
+      json_encode/toJson dicetak mentah dengan {!! !!}. json_encode tidak
+      meng-escape < dan >, sehingga data berisi </script><script>…</script>
+      — nama pengguna, judul surat — menutup blok script dan menjalankan skrip
+      penyerang (XSS). Gunakan @json($data) atau Js::from($data), atau
+      json_encode($data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT |
+      JSON_HEX_AMP).
+    patterns:
+      - pattern-regex: \{!!\s*(json_encode\s*\((?:(?!!!\}).)*\)|(?:(?!!!\}).)*->toJson\s*\([^)]*\))\s*!!\}
+      - pattern-not-regex: JSON_HEX_TAG
+    metadata:
+      judul: "json_encode dicetak mentah di Blade"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [laravel, blade, php]
+      references:
+        - https://laravel.com/docs/blade#rendering-json
+        - https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+
+  - id: blade-raw-echo-request-input
+    languages: [regex]
+    paths:
+      include: ["*.blade.php"]
+    severity: ERROR
+    message: >-
+      Input request dicetak tanpa escaping dengan {!! !!}. Penyerang cukup
+      mengirim tautan berisi skrip di parameter tersebut untuk menjalankannya
+      di browser korban (reflected XSS). Gunakan {{ }}.
+    pattern-regex: \{!!\s*(request\s*\(|\$request\s*->|old\s*\(|Request::(input|get|query)\s*\(|\$_(GET|POST|REQUEST|COOKIE)\b)(?:(?!!!\}).)*!!\}
+    metadata:
+      judul: "Input request dicetak mentah di Blade"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [laravel, blade, php]
+      references:
+        - https://laravel.com/docs/blade#displaying-unescaped-data

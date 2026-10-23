@@ -1,0 +1,27 @@
+name: Rule regression and release integrity
+on:
+  pull_request:
+  push:
+permissions:
+  contents: read
+jobs:
+  rules:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install test dependencies and verified engines
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install -r requirements-dev.txt
+          .venv/bin/python scripts/install_tools.py
+      - name: Check release integrity and run assertions
+        env:
+          OPENGREP_BIN: ${{ github.workspace }}/.build/tools/opengrep
+          GITLEAKS_BIN: ${{ github.workspace }}/.build/tools/gitleaks
+          XDG_CACHE_HOME: ${{ github.workspace }}/.build/cache
+        run: |
+          .venv/bin/python scripts/build_packs.py --check
+          .venv/bin/python -m unittest discover -s tests -v
+          .venv/bin/python scripts/test_rules.py --jobs 2
+          .venv/bin/python scripts/smoke_engine.py

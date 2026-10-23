@@ -1,0 +1,319 @@
+[
+  {
+    "case": "js-redirect-else",
+    "pass": true,
+    "expected": [
+      [
+        "dom-open-redirect-from-url",
+        1
+      ]
+    ],
+    "actual": [
+      [
+        "dom-open-redirect-from-url",
+        1
+      ]
+    ],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "js-redirect-reassign",
+    "pass": true,
+    "expected": [
+      [
+        "dom-open-redirect-from-url",
+        1
+      ]
+    ],
+    "actual": [
+      [
+        "dom-open-redirect-from-url",
+        1
+      ]
+    ],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "js-redirect-mutate",
+    "pass": true,
+    "expected": [
+      [
+        "dom-open-redirect-from-url",
+        1
+      ]
+    ],
+    "actual": [
+      [
+        "dom-open-redirect-from-url",
+        1
+      ]
+    ],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "js-postmessage-else",
+    "pass": true,
+    "expected": [
+      [
+        "postmessage-listener-without-origin-check",
+        1
+      ]
+    ],
+    "actual": [
+      [
+        "postmessage-listener-without-origin-check",
+        1
+      ]
+    ],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "dart-check-after-exec",
+    "pass": true,
+    "expected": [
+      [
+        "dart-downloaded-file-executed-without-verification",
+        1
+      ]
+    ],
+    "actual": [
+      [
+        "dart-downloaded-file-executed-without-verification",
+        1
+      ]
+    ],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "dart-else-exec",
+    "pass": true,
+    "expected": [
+      [
+        "dart-downloaded-file-executed-without-verification",
+        1
+      ]
+    ],
+    "actual": [
+      [
+        "dart-downloaded-file-executed-without-verification",
+        1
+      ]
+    ],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "python-tuple-reassign",
+    "pass": true,
+    "expected": [
+      [
+        "flask-open-redirect",
+        6
+      ]
+    ],
+    "actual": [
+      [
+        "flask-open-redirect",
+        6
+      ]
+    ],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "php-header-overridden",
+    "pass": true,
+    "expected": [
+      [
+        "php-xss-echo-request",
+        1
+      ]
+    ],
+    "actual": [
+      [
+        "php-xss-echo-request",
+        1
+      ]
+    ],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "php-placeholder-fragment",
+    "pass": true,
+    "expected": [
+      [
+        "php-sqli-from-request",
+        1
+      ]
+    ],
+    "actual": [
+      [
+        "php-sqli-from-request",
+        1
+      ]
+    ],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "php-unquoted-html-attribute",
+    "pass": true,
+    "expected": [
+      [
+        "php-html-encoding-in-unquoted-attribute",
+        1
+      ]
+    ],
+    "actual": [
+      [
+        "php-html-encoding-in-unquoted-attribute",
+        1
+      ]
+    ],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "js-redirect-safe-accepted",
+    "pass": true,
+    "expected": [],
+    "actual": [],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "js-postmessage-safe-accepted",
+    "pass": true,
+    "expected": [],
+    "actual": [],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "dart-safe-accepted",
+    "pass": true,
+    "expected": [],
+    "actual": [],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "dart-stored-safe-accepted",
+    "pass": true,
+    "expected": [],
+    "actual": [],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "dart-fixed-no-download",
+    "pass": true,
+    "expected": [],
+    "actual": [],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "dart-literal-download",
+    "pass": true,
+    "expected": [
+      [
+        "dart-downloaded-file-executed-without-verification",
+        1
+      ]
+    ],
+    "actual": [
+      [
+        "dart-downloaded-file-executed-without-verification",
+        1
+      ]
+    ],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "dart-literal-safe-accepted",
+    "pass": true,
+    "expected": [],
+    "actual": [],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "php-header-json-safe",
+    "pass": true,
+    "expected": [],
+    "actual": [],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "php-header-plain-safe",
+    "pass": true,
+    "expected": [],
+    "actual": [],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "php-quoted-html-attribute-safe",
+    "pass": true,
+    "expected": [],
+    "actual": [],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "php-bound-placeholder-safe",
+    "pass": true,
+    "expected": [],
+    "actual": [],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "php-integer-attribute-safe",
+    "pass": true,
+    "expected": [],
+    "actual": [],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  },
+  {
+    "case": "python-safe-accepted",
+    "pass": true,
+    "expected": [],
+    "actual": [],
+    "errors": [],
+    "exit": 0,
+    "scanned": 1
+  }
+]

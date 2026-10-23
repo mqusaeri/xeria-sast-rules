@@ -1,0 +1,266 @@
+# Autentikasi, sesi, cookie, JWT, dan CORS di aplikasi Node.js.
+rules:
+  - id: jwt-none-algorithm
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Algoritma JWT "none" diizinkan. Token tanpa tanda tangan akan diterima,
+      sehingga penyerang dapat membuat token untuk pengguna mana pun, termasuk
+      admin. Tetapkan daftar algoritma yang diizinkan secara eksplisit, misalnya
+      algorithms: ['HS256'] atau ['RS256'].
+    pattern-either:
+      - pattern: '$JWT.verify($T, $K, {..., algorithms: [..., "none", ...], ...}, ...)'
+      - pattern: '$JWT.sign($P, $K, {..., algorithm: "none", ...}, ...)'
+    metadata:
+      judul: "Algoritma JWT none diizinkan"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-347: Improper Verification of Cryptographic Signature"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [jwt, jsonwebtoken, node.js]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html
+
+  - id: jwt-hardcoded-secret
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Kunci penandatangan JWT ditulis langsung di kode. Siapa pun yang membaca
+      kode dapat membuat token sah untuk pengguna mana pun. Baca kunci dari
+      environment variable atau secret manager, dan ganti kunci yang sudah
+      terlanjur tersimpan di repositori.
+    pattern-either:
+      - pattern: $JWT.sign($P, "...", ...)
+      - pattern: $JWT.verify($T, "...", ...)
+      - pattern: 'JwtModule.register({..., secret: "...", ...})'
+      - pattern: 'new JwtStrategy({..., secretOrKey: "...", ...}, ...)'
+      - pattern: 'super({..., secretOrKey: "...", ...})'
+      # Nilai cadangan: process.env.JWT_SECRET || '...' (SC WFH KODAM XXIII PW).
+      # Bila variabelnya lupa diisi, token ditandatangani dengan kunci yang
+      # tertulis di kode. Laporan jatuh pada baris deklarasinya.
+      - patterns:
+          - pattern-either:
+              - pattern: $SECRET = process.env.$E || "$LIT"
+              - pattern: $SECRET = process.env.$E ?? "$LIT"
+          - metavariable-regex:
+              metavariable: $SECRET
+              regex: (?i)^(const\s+|let\s+|var\s+)?\w*(jwt|token|secret|signing)\w*$
+          - metavariable-regex:
+              metavariable: $LIT
+              regex: ^.{8,}$
+    metadata:
+      judul: "Kunci penandatangan JWT tertulis di kode"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [jwt, jsonwebtoken, nestjs, passport, node.js]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html
+
+  - id: jwt-expiration-ignored
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Masa berlaku JWT diabaikan saat verifikasi. Token yang sudah kedaluwarsa —
+      termasuk token yang pernah bocor — tetap diterima selamanya. Hapus opsi
+      ignoreExpiration.
+    pattern-either:
+      - pattern: '$JWT.verify($T, $K, {..., ignoreExpiration: true, ...}, ...)'
+      - pattern: '{..., ignoreExpiration: true, secretOrKey: $S, ...}'
+    metadata:
+      judul: "Masa berlaku JWT diabaikan saat verifikasi"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-613: Insufficient Session Expiration"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [jwt, jsonwebtoken, passport, nestjs]
+      references:
+        - https://github.com/auth0/node-jsonwebtoken#jwtverifytoken-secretorpublickey-options-callback
+
+  - id: jwt-decode-without-verify
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Isi JWT dibaca dengan jwt.decode, yang tidak memeriksa tanda tangan. Bila
+      hasilnya dipakai untuk menentukan identitas atau hak akses, penyerang dapat
+      mengubah isi token sesukanya. Gunakan jwt.verify dengan kunci dan daftar
+      algoritma yang jelas.
+    pattern-either:
+      - pattern: jwt.decode(...)
+      - pattern: jsonwebtoken.decode(...)
+      - pattern: jwtDecode(...)
+      - pattern: decodeJwt(...)
+      - pattern: jose.decodeJwt(...)
+    metadata:
+      judul: "Isi JWT dibaca tanpa verifikasi tanda tangan"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-345: Insufficient Verification of Data Authenticity"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: LOW
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [jwt, jsonwebtoken, jose, node.js]
+      references:
+        - https://github.com/auth0/node-jsonwebtoken#jwtdecodetoken--options
+
+  - id: express-session-hardcoded-secret
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Secret penandatangan cookie sesi ditulis langsung di kode. Penyerang yang
+      membaca kode dapat memalsukan cookie sesi. Baca secret dari environment
+      variable dan gunakan nilai acak yang panjang.
+    pattern-either:
+      - pattern: 'session({..., secret: "...", ...})'
+      - pattern: 'expressSession({..., secret: "...", ...})'
+      - pattern: 'cookieSession({..., secret: "...", ...})'
+      - pattern: 'cookieSession({..., keys: ["...", ...], ...})'
+      - pattern: cookieParser("...")
+    metadata:
+      judul: "Secret sesi Express tertulis di kode"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [express, express-session, node.js]
+      references:
+        - https://expressjs.com/en/advanced/best-practice-security.html#use-cookies-securely
+
+  - id: express-cookie-insecure-flags
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Cookie dibuat dengan httpOnly: false atau secure: false. Tanpa httpOnly,
+      skrip hasil XSS dapat mencuri cookie; tanpa secure, cookie ikut terkirim
+      lewat HTTP biasa dan dapat disadap. Aktifkan httpOnly dan secure, serta
+      sameSite: 'lax' atau 'strict'.
+    pattern-either:
+      - pattern: '$RES.cookie($N, $V, {..., httpOnly: false, ...})'
+      # TanStack Start / h3 / Hono / Elysia
+      - pattern: 'setCookie($N, $V, {..., secure: false, ...})'
+      - pattern: 'setCookie($N, $V, {..., httpOnly: false, ...})'
+      - pattern: 'setCookie($C, $N, $V, {..., secure: false, ...})'
+      - pattern: 'setCookie($C, $N, $V, {..., httpOnly: false, ...})'
+      - pattern: '$COOKIE.set({..., secure: false, ...})'
+      - pattern: '$COOKIE.set({..., httpOnly: false, ...})'
+      - pattern: '$STORE.set($N, $V, {..., secure: false, ...})'
+      - pattern: '$RES.cookie($N, $V, {..., secure: false, ...})'
+      - pattern: 'session({..., cookie: {..., httpOnly: false, ...}, ...})'
+      - pattern: 'session({..., cookie: {..., secure: false, ...}, ...})'
+    metadata:
+      judul: "Cookie tanpa flag httpOnly atau secure (Express)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-614: Sensitive Cookie in HTTPS Session Without Secure Attribute"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [express, express-session, cookie, tanstack-start, hono, elysia, next.js]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#cookies
+
+  - id: node-cors-wildcard-with-credentials
+    languages:
+    - javascript
+    - typescript
+    severity: ERROR
+    message: Konfigurasi origin:true memantulkan origin pemanggil sekaligus mengizinkan kredensial. Situs
+      tidak tepercaya dapat membaca respons berkredensial bila prasyarat browser/cookie terpenuhi. Gunakan
+      allowlist origin yang spesifik.
+    pattern-either:
+    - pattern: 'cors({..., origin: true, ..., credentials: true, ...})'
+    - pattern: 'cors({..., credentials: true, ..., origin: true, ...})'
+    - pattern: '$APP.enableCors({..., origin: true, ..., credentials: true, ...})'
+    - pattern: '$APP.enableCors({..., credentials: true, ..., origin: true, ...})'
+    metadata:
+      judul: CORS memantulkan origin tanpa pembatasan dengan kredensial
+      category: security
+      subcategory:
+      - vuln
+      cwe: 'CWE-942: Permissive Cross-domain Policy with Untrusted Domains'
+      owasp: A05:2021 - Security Misconfiguration
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology:
+      - express
+      - nestjs
+      - cors
+      references:
+      - https://portswigger.net/web-security/cors
+
+  - id: node-cors-reflect-any-origin
+    languages:
+    - javascript
+    - typescript
+    severity: INFO
+    message: CORS mengizinkan pembacaan lintas origin untuk API ini. Hal ini dapat disengaja pada API publik;
+      tinjau klasifikasi data. Wildcard tidak mengizinkan browser membaca respons berkredensial. Gunakan
+      allowlist bila API tidak ditujukan untuk akses lintas origin.
+    pattern-either:
+    - pattern: $APP.enableCors()
+    - pattern: app.use(cors())
+    - pattern: 'NestFactory.create($M, {..., cors: true, ...})'
+    metadata:
+      judul: CORS mengizinkan semua origin (Node.js)
+      category: security
+      subcategory:
+      - audit
+      cwe: 'CWE-942: Permissive Cross-domain Policy with Untrusted Domains'
+      owasp: A05:2021 - Security Misconfiguration
+      confidence: LOW
+      likelihood: LOW
+      impact: MEDIUM
+      technology:
+      - express
+      - nestjs
+      - cors
+      references:
+      - https://docs.nestjs.com/security/cors
+
+  - id: node-bcrypt-low-cost
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Faktor biaya bcrypt kurang dari 10, sehingga hash password dapat ditebak
+      jauh lebih cepat bila basis data bocor. Gunakan faktor biaya minimal 10
+      (disarankan 12).
+    patterns:
+      - pattern-either:
+          - pattern: $B.hash($PW, $ROUNDS, ...)
+          - pattern: $B.hashSync($PW, $ROUNDS)
+          - pattern: $B.genSalt($ROUNDS, ...)
+          - pattern: $B.genSaltSync($ROUNDS)
+      - metavariable-regex:
+          metavariable: $B
+          regex: ^(bcrypt|bcryptjs)$
+      - metavariable-comparison:
+          metavariable: $ROUNDS
+          comparison: $ROUNDS < 10
+    metadata:
+      judul: "Faktor biaya bcrypt terlalu rendah"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-916: Use of Password Hash With Insufficient Computational Effort"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [bcrypt, node.js]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#bcrypt

@@ -1,0 +1,266 @@
+# Java desktop dan seluler: perintah sistem dari kolom isian dan pemeriksaan
+# nama host TLS yang dimatikan.
+#
+# Aturan TLS semgrep-rules mengenali kelas HostnameVerifier yang selalu
+# mengembalikan true dan baris import NoopHostnameVerifier, tetapi tidak
+# mengenali konstanta ALLOW_ALL_HOSTNAME_VERIFIER Apache HttpClient 4 maupun
+# lambda (h, s) -> true — bentuk yang dipakai integrasi BPJS/radiologi di
+# SIMRS-Khanza dan turunannya.
+rules:
+  - id: java-command-from-ui-input
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Perintah sistem operasi disusun dari teks kolom isian layar. Pengguna
+      dapat menambahkan & del … atau ; rm … untuk menjalankan perintah apa pun
+      dengan hak akses aplikasi di komputer itu. Jalankan program dengan
+      ProcessBuilder dan daftar argumen terpisah (bukan satu string perintah),
+      batasi nilai ke daftar yang diizinkan, dan jangan memanggil cmd /c atau
+      sh -c dengan nilai dari pengguna.
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern: $F.getText()
+          # Kolom yang dibuat tidak bisa diketik di kelas yang sama: nilainya
+          # diisi program (mis. nomor rawat terpilih), bukan diketik pengguna.
+          - pattern-not-inside: |
+              class $CLS {
+                ...
+                $RET $METHOD(...) {
+                  ...
+                  $F.setEditable(false);
+                  ...
+                }
+                ...
+              }
+          - pattern-not-inside: |
+              class $CLS {
+                ...
+                $CTOR(...) {
+                  ...
+                  $F.setEditable(false);
+                  ...
+                }
+                ...
+              }
+          - pattern-not-inside: |
+              class $CLS {
+                ...
+                $RET $METHOD(...) {
+                  ...
+                  $F.setEnabled(false);
+                  ...
+                }
+                ...
+              }
+          - pattern-not-inside: |
+              class $CLS {
+                ...
+                $CTOR(...) {
+                  ...
+                  $F.setEnabled(false);
+                  ...
+                }
+                ...
+              }
+          # Kolom tersembunyi tidak dapat diketik.
+          - pattern-not-inside: |
+              class $CLS {
+                ...
+                $RET $METHOD(...) {
+                  ...
+                  $F.setVisible(false);
+                  ...
+                }
+                ...
+              }
+          - pattern-not-inside: |
+              class $CLS {
+                ...
+                $CTOR(...) {
+                  ...
+                  $F.setVisible(false);
+                  ...
+                }
+                ...
+              }
+          # Label dan tombol: teksnya ditulis aplikasi.
+          - pattern-not: (widget.Label $X).getText()
+          - pattern-not: (javax.swing.JLabel $X).getText()
+          - pattern-not: (JLabel $X).getText()
+          - pattern-not: (widget.Button $X).getText()
+          - pattern-not: (javax.swing.JButton $X).getText()
+          - pattern-not: (JButton $X).getText()
+          - pattern-not: (javafx.scene.control.Label $X).getText()
+          - pattern-not: (Label $X).getText()
+      # Kolom yang dikunci di satu tempat tetapi dibuka lagi tetap bisa
+      # diketik sebagian pengguna — argumen apa pun selain literal false:
+      # true, atau ekspresi peran seperti KdDokter.setEditable(
+      # akses.getadmin()) di SIMRS-Khanza. Hanya di dalam method (pola
+      # konstruktor menambah biaya 50% dan membuat DlgKamarInap 1,7 MB
+      # kena timeout), nama method eksplisit ($F.$SETTER($ARG) cocok dengan
+      # setiap pemanggilan di kelas raksasa).
+      # (1) setEditable/setEnabled dibuka lagi.
+      - patterns:
+          - pattern: $F.getText()
+          - pattern-either:
+              - pattern-inside: |
+                  class $CLS {
+                    ...
+                    $RET $METHOD(...) {
+                      ...
+                      $F.setEditable($ARG);
+                      ...
+                    }
+                    ...
+                  }
+              - pattern-inside: |
+                  class $CLS {
+                    ...
+                    $RET $METHOD(...) {
+                      ...
+                      $F.setEnabled($ARG);
+                      ...
+                    }
+                    ...
+                  }
+          - metavariable-regex:
+              metavariable: $ARG
+              regex: ^(?!false$)
+          - pattern-not: (widget.Label $X).getText()
+          - pattern-not: (javax.swing.JLabel $X).getText()
+          - pattern-not: (JLabel $X).getText()
+          - pattern-not: (widget.Button $X).getText()
+          - pattern-not: (javax.swing.JButton $X).getText()
+          - pattern-not: (JButton $X).getText()
+          - pattern-not: (javafx.scene.control.Label $X).getText()
+          - pattern-not: (Label $X).getText()
+      # (2) Dimunculkan lagi (setVisible) — hanya membuka kunci "tersembunyi";
+      # kolom yang tetap dikunci setEditable/setEnabled(false) tidak bisa
+      # diketik (KdKamar di InhealthCekEligibilitas SIMRS Soepraoen).
+      - patterns:
+          - pattern: $F.getText()
+          - pattern-inside: |
+                  class $CLS {
+                    ...
+                    $RET $METHOD(...) {
+                      ...
+                      $F.setVisible($ARG);
+                      ...
+                    }
+                    ...
+                  }
+          - metavariable-regex:
+              metavariable: $ARG
+              regex: ^(?!false$)
+          - pattern-not-inside: |
+                  class $CLS2 {
+                    ...
+                    $RET2 $METHOD2(...) {
+                      ...
+                      $F.setEditable(false);
+                      ...
+                    }
+                    ...
+                  }
+          - pattern-not-inside: |
+                  class $CLS2 {
+                    ...
+                    $CTOR2(...) {
+                      ...
+                      $F.setEditable(false);
+                      ...
+                    }
+                    ...
+                  }
+          - pattern-not-inside: |
+                  class $CLS2 {
+                    ...
+                    $RET2 $METHOD2(...) {
+                      ...
+                      $F.setEnabled(false);
+                      ...
+                    }
+                    ...
+                  }
+          - pattern-not-inside: |
+                  class $CLS2 {
+                    ...
+                    $CTOR2(...) {
+                      ...
+                      $F.setEnabled(false);
+                      ...
+                    }
+                    ...
+                  }
+          - pattern-not: (widget.Label $X).getText()
+          - pattern-not: (javax.swing.JLabel $X).getText()
+          - pattern-not: (JLabel $X).getText()
+          - pattern-not: (widget.Button $X).getText()
+          - pattern-not: (javax.swing.JButton $X).getText()
+          - pattern-not: (JButton $X).getText()
+          - pattern-not: (javafx.scene.control.Label $X).getText()
+          - pattern-not: (Label $X).getText()
+      - pattern: JOptionPane.showInputDialog(...)
+    pattern-sanitizers:
+      - pattern: Integer.parseInt(...)
+      - pattern: Long.parseLong(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: Runtime.getRuntime().exec($CMD, ...)
+              - pattern: (Runtime $RT).exec($CMD, ...)
+              - pattern: new ProcessBuilder(..., $CMD, ...)
+              - pattern: (ProcessBuilder $PB).command(..., $CMD, ...)
+          - focus-metavariable: $CMD
+    metadata:
+      # Diperiksa mesin XERIA sesudah Opengrep (engines/code/file_requirements.dart):
+      # temuan hanya di berkas antarmuka. getText() juga milik pustaka XML
+      # (JDOM/dom4j), Selenium, dan parser JSON. Penjaga di dalam pola
+      # ("import …; ..." atau "class … extends …") lima kali lebih lambat
+      # pada berkas SIMRS 2–3 MB, dan yang pertama memakan 13,8 GB memori.
+      # SIMRS Soepraoen: 699 dari 699 berkas bertemuan memenuhi syarat ini.
+      xeria-syarat-berkas: '^\s*import\s+(?:javax\.swing|java\.awt|javafx\.scene|android\.(?:widget|app|view)|androidx\.)|extends\s+(?:javax\.swing\.)?J(?:Dialog|Frame|Panel|InternalFrame|Applet|Window)\b|extends\s+(?:AppCompat|Fragment|Component)?Activity\b|extends\s+Fragment\b'
+      judul: "Perintah sistem dari kolom isian aplikasi (Java)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-78: Improper Neutralization of Special Elements used in an OS Command"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [java, swing, javafx, android]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html
+
+  - id: java-tls-hostname-verification-disabled
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Pemeriksaan nama host sertifikat TLS dimatikan: koneksi HTTPS menerima
+      sertifikat sah milik domain mana pun. Siapa pun di jaringan yang sama
+      (Wi-Fi, LAN rumah sakit, proxy) dapat menyamar sebagai server tujuan
+      dengan sertifikat domainnya sendiri, lalu membaca dan mengubah data
+      serta kredensial yang dikirim. Pakai HostnameVerifier bawaan
+      (DefaultHostnameVerifier / HttpsURLConnection.getDefaultHostnameVerifier()).
+    pattern-either:
+      - pattern: SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER
+      - pattern: org.apache.http.conn.ssl.SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER
+      - pattern: new AllowAllHostnameVerifier()
+      - pattern: NoopHostnameVerifier.INSTANCE
+      - pattern: new NoopHostnameVerifier()
+      - pattern: $X.setHostnameVerifier(($H, $S) -> true)
+      - pattern: HttpsURLConnection.setDefaultHostnameVerifier(($H, $S) -> true)
+    metadata:
+      judul: "Pemeriksaan nama host sertifikat TLS dimatikan (Java)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-297: Improper Validation of Certificate with Host Mismatch"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [java, swing, android, spring]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html
+        - https://developer.android.com/privacy-and-security/security-ssl

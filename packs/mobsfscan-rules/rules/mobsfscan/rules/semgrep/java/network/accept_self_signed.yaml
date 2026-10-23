@@ -1,0 +1,26 @@
+rules:
+- id: accept_self_signed_certificate
+  message: Certificate or hostname validation is explicitly bypassed. Keep the platform trust manager
+    and hostname validation, or implement verification against a trusted certificate authority.
+  languages:
+  - java
+  severity: ERROR
+  metadata:
+    cwe: cwe-295
+    owasp-mobile: m3
+    masvs: network-3
+    reference: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05g-Testing-Network-Communication.md#testing-endpoint-identify-verification-mstg-network-3
+    confidence: HIGH
+  pattern-either:
+  - pattern: $X.SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER
+  - pattern: $X.setHostnameVerifier($Z.ALLOW_ALL_HOSTNAME_VERIFIER)
+  - pattern: $X.setHostnameVerifier(new AllowAllHostnameVerifier())
+  - pattern: $X.setDefaultHostnameVerifier(new NullHostnameVerifier())
+  - pattern: $X.setDefaultHostnameVerifier((HostnameVerifier) new NullHostnameVerifier())
+  - pattern: $RET verify(..., SSLSession $SESSION) { return true; }
+  - pattern: void checkServerTrusted(X509Certificate[] $CHAIN, String $AUTH) { }
+  - pattern: void checkServerTrusted(X509Certificate[] $CHAIN, String $AUTH) { return; }
+  - pattern: $X.setHostnameVerifier(($HOST, $SESSION) -> true)
+  - pattern: $X.setDefaultHostnameVerifier(($HOST, $SESSION) -> true)
+  - pattern: $Z.setDisableCNCheck(true)
+  - pattern: setSslSocketFactory(new NonValidatingSSLSocketFactory())

@@ -1,0 +1,180 @@
+# Laravel: data dari request yang langsung menentukan status, peran, atau
+# kepemilikan record; mass assignment; pengalihan; dan setelan cookie sesi.
+#
+# Diukur di SIMAWAS (Laravel 11): tujuh fungsi store* menyimpan
+# 'status' => $request->input('status', 'Submitted') tanpa aturan validasi,
+# padahal dua fungsi serupa memvalidasinya dengan in:Draft,Submitted.
+rules:
+  - id: laravel-sensitive-field-from-unvalidated-request
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Field status, peran atau kepemilikan diisi langsung dari request. Tinjau otorisasi field dan objek sebelum
+      menyimpan: validasi tipe atau sekadar membuat Validator::make tidak membuktikan pengguna boleh mengubah is_admin/owner_id/status.
+      Tetapkan nilai di server atau gunakan data tervalidasi yang dibatasi policy otorisasi. Temuan ini memerlukan
+      penilaian terhadap guard/middleware aplikasi.
+    patterns:
+      - pattern-inside: |
+          function $FN(..., Request $REQ, ...) { ... }
+      - pattern-either:
+          - pattern: |
+              [..., $KEY => $REQ->input(...), ...]
+          - pattern: |
+              [..., $KEY => $REQ->get(...), ...]
+          - pattern: |
+              [..., $KEY => $REQ->post(...), ...]
+          - pattern: |
+              [..., $KEY => $REQ->query(...), ...]
+          - pattern: |
+              [..., $KEY => $REQ->$PROP, ...]
+          - pattern: |
+              [..., $KEY => request(...), ...]
+      # Identitas dari sesi, bukan isian pengguna.
+      - pattern-not: |
+          [..., $KEY => $REQ->user()->$ATTR, ...]
+      - pattern-not: |
+          [..., $KEY => $REQ->user(), ...]
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: 
+            ^['"](status|state|role|role_id|roles|is_admin|is_superadmin|is_verified|verified|is_approved|approved|approved_by|verified_by|created_by|uploaded_by|user_id|owner_id|unit_id|level|permission|permissions)['"]$
+      - focus-metavariable: $KEY
+    metadata:
+      judul: "Field sensitif diisi langsung dari request (Laravel)"
+      category: security
+      subcategory:
+        - audit
+      cwe: "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      owasp: "A04:2021 - Insecure Design"
+      confidence: MEDIUM
+      likelihood: HIGH
+      impact: HIGH
+      technology: [laravel, php, eloquent]
+      references:
+        - https://laravel.com/docs/validation#rule-in
+        - https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html
+
+  - id: laravel-mass-assignment-request-all
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Seluruh isi request diteruskan ke create/update/fill model. Field yang
+      tidak ditampilkan di formulir — role, status, user_id — ikut tersimpan
+      bila tercantum di $fillable atau model memakai $guarded = []. Teruskan
+      hanya data tervalidasi ($request->validated()) atau
+      $request->only([...]).
+    pattern-either:
+      - pattern: $M::create($REQ->all())
+      - pattern: $M::forceCreate($REQ->all())
+      - pattern: $M::updateOrCreate($A, $REQ->all())
+      - pattern: $M::firstOrCreate($A, $REQ->all())
+      - pattern: $OBJ->update($REQ->all())
+      - pattern: $OBJ->fill($REQ->all())
+      - pattern: $OBJ->forceFill($REQ->all())
+      - pattern: new $M($REQ->all())
+      - pattern: $M::create(request()->all())
+      - pattern: $OBJ->update(request()->all())
+      - pattern: $OBJ->fill(request()->all())
+    metadata:
+      judul: "Mass assignment dari seluruh isi request (Laravel)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      owasp: "A04:2021 - Insecure Design"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [laravel, php, eloquent]
+      references:
+        - https://laravel.com/docs/eloquent#mass-assignment
+        - https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html
+
+  - id: laravel-open-redirect-from-request
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Tujuan pengalihan diambil dari input request. Penyerang dapat membuat
+      tautan ke aplikasi ini yang langsung mengalihkan korban ke situs
+      phishing. Alihkan ke nama route internal, atau cocokkan tujuan dengan
+      daftar host/path yang diizinkan (url()->isValidUrl tidak cukup).
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: $_GET
+          - pattern: $_POST
+          - pattern: $_REQUEST
+          - pattern: request(...)
+          - pattern: $REQUEST->header('referer')
+          - patterns:
+              - pattern-either:
+                  - pattern: $REQUEST->input(...)
+                  - pattern: $REQUEST->get(...)
+                  - pattern: $REQUEST->query(...)
+                  - pattern: $REQUEST->post(...)
+              - metavariable-regex:
+                  metavariable: $REQUEST
+                  regex: ^\$(request|req|this->request)$
+          - pattern: url()->previous()
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: redirect()->away($URL, ...)
+              - pattern: redirect($URL, ...)
+              - pattern: redirect()->to($URL, ...)
+              - pattern: Redirect::to($URL, ...)
+              - pattern: Redirect::away($URL, ...)
+              - pattern: 'header("Location: " . $URL)'
+          - focus-metavariable: $URL
+    pattern-sanitizers:
+      - pattern: route(...)
+    metadata:
+      judul: "Open redirect dari input request (Laravel)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-601: URL Redirection to Untrusted Site ('Open Redirect')"
+      owasp: "A01:2021 - Broken Access Control"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [laravel, php]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html
+
+  - id: laravel-session-cookie-secure-not-enforced
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Flag Secure cookie sesi hanya bergantung pada variabel lingkungan tanpa
+      nilai bawaan aman. Bila SESSION_SECURE_COOKIE tidak diset di .env
+      produksi, cookie sesi ikut terkirim lewat HTTP biasa dan dapat disadap
+      di jaringan. Beri nilai bawaan true
+      (env('SESSION_SECURE_COOKIE', true)) dan pastikan aplikasi dilayani
+      lewat HTTPS.
+    patterns:
+      - pattern: |
+          [..., 'secure' => $V, ...]
+      - pattern-inside: |
+          [..., 'cookie' => $C, ...]
+      - metavariable-pattern:
+          metavariable: $V
+          pattern-either:
+            - pattern: env('SESSION_SECURE_COOKIE')
+            - pattern: env('SESSION_SECURE_COOKIE', false)
+            - pattern: env('SESSION_SECURE_COOKIE', null)
+            - pattern: "false"
+      - focus-metavariable: $V
+    paths:
+      include: ["*session.php"]
+    metadata:
+      judul: "Flag Secure cookie sesi tidak dipaksa (Laravel)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-614: Sensitive Cookie in HTTPS Session Without 'Secure' Attribute"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [laravel, php]
+      references:
+        - https://laravel.com/docs/session#configuration
+        - https://cheatsheetseries.owasp.org/cheatsheets/Laravel_Cheat_Sheet.html#cookie-security-and-session-management

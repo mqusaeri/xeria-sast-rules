@@ -1,0 +1,36 @@
+rules:
+- id: cbc_padding_oracle
+  patterns:
+  - pattern-either:
+    - pattern: 'Cipher.getInstance("AES/CBC/PKCS5Padding")
+
+        '
+    - pattern: 'Cipher.getInstance("Blowfish/CBC/PKCS5Padding")
+
+        '
+    - pattern: 'Cipher.getInstance("DES/CBC/PKCS5Padding")
+
+        '
+    - pattern: 'Cipher.getInstance("AES/CBC/PKCS7Padding")
+
+        '
+    - pattern: 'Cipher.getInstance("Blowfish/CBC/PKCS7Padding")
+
+        '
+    - pattern: 'Cipher.getInstance("DES/CBC/PKCS7Padding")
+
+        '
+  message: CBC with PKCS padding requires integrity protection and uniform error handling. A padding oracle
+    is possible if an attacker can distinguish padding failures. Prefer an authenticated encryption mode;
+    this API usage alone does not prove an exploitable oracle.
+  languages:
+  - java
+  severity: WARNING
+  metadata:
+    cwe: cwe-649
+    owasp-mobile: m5
+    masvs: crypto-3
+    reference: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x04g-Testing-Cryptography.md#padding-oracle-attacks-due-to-weaker-padding-or-block-operation-implementations
+    confidence: LOW
+    subcategory:
+    - audit

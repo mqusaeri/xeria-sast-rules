@@ -1,0 +1,31 @@
+rules:
+- id: mcp-typosquatted-tool-name-python
+  languages:
+  - python
+  severity: WARNING
+  message: This MCP tool name resembles one of a small set of known misspellings. Review package provenance
+    and whether the name is intentional. Correct spelling alone is not evidence that a tool is trustworthy.
+  metadata:
+    cwe: 'CWE-1357: Reliance on Insufficiently Trustworthy Component'
+    category: security
+    confidence: MEDIUM
+    subcategory:
+    - audit
+    likelihood: MEDIUM
+    impact: HIGH
+    technology:
+    - mcp
+    references:
+    - https://github.com/Agent-Threat-Rule/agent-threat-rules
+    - https://modelcontextprotocol.io/specification/draft/basic/security_best_practices
+  pattern-either:
+  - patterns:
+    - pattern: "@$MCP.tool()\ndef $NAME(...):\n    ...\n"
+    - metavariable-regex:
+        metavariable: $NAME
+        regex: ^(?:filesytem|filsystem|file_sytem|flie_system|filessystem|filesystm|filsystm|filesysem|gtihub|githbu|gihtub|gthub|g1thub|githuub|guthub|databse|databaes|dtabase|datbase|databasse|databasee|dataase)_(?:read|write|list|delete|search|api|commit|pr|issue|repo|query|exec|connect)
+  - patterns:
+    - pattern: "@$MCP.tool(name=$STR, ...)\ndef $X(...):\n    ...\n"
+    - metavariable-regex:
+        metavariable: $STR
+        regex: ^["'](?:filesytem|filsystem|file_sytem|flie_system|filessystem|filesystm|filsystm|filesysem|gtihub|githbu|gihtub|gthub|g1thub|githuub|guthub|databse|databaes|dtabase|datbase|databasse|databasee|dataase)[-_](?:read|write|list|delete|search|api|commit|pr|issues?|repos?|query|exec|connect)["']$

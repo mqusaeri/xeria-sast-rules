@@ -1,0 +1,145 @@
+# Keacakan Go: math/rand dipakai untuk nilai yang harus tidak dapat ditebak.
+# Diukur di ETWPAD: jitter backoff (sftp.go) dan X-EXTERNAL-ID SNAP BI
+# (helper.go) bukan kerentanan, sehingga aturan hanya berlaku bila nilainya
+# dinamai token, OTP, sandi, salt, nonce, kunci, atau sesi.
+# Nama paket `rand` tidak menentukan: crypto/rand memakai nama yang sama.
+# Syaratnya: berkas mengimpor math/rand TANPA alias — hanya itu yang membuat
+# `rand.` pasti math/rand. math/rand beralias (mrand "math/rand") sengaja
+# tidak dicakup; dicatat sebagai gaps katalog cakupan `go`.
+rules:
+  - id: go-insecure-random-for-secret
+    languages: [go]
+    severity: WARNING
+    message: >-
+      Token, OTP, sandi, salt, nonce, atau kunci dibuat dengan math/rand.
+      math/rand bukan pembangkit acak keamanan: keluarannya deterministik
+      terhadap benihnya, sehingga nilai berikutnya dapat ditebak oleh penyerang
+      yang melihat beberapa nilai sebelumnya. Pakai crypto/rand.
+    patterns:
+      # Go melarang dua impor polos bernama `rand`, jadi bila berkas ini
+      # mengimpor math/rand TANPA alias, `rand.` pasti math/rand — meski
+      # crypto/rand ikut diimpor dengan alias. Sebaliknya, math/rand yang
+      # beralias membuat `rand.` milik paket lain, jadi dikecualikan.
+      - pattern-either:
+          - pattern-inside: |
+              import "math/rand"
+              ...
+          - pattern-inside: |
+              import "math/rand/v2"
+              ...
+      - pattern-not-inside: |
+          import $ALIAS "math/rand"
+          ...
+      - pattern-not-inside: |
+          import $ALIAS "math/rand/v2"
+          ...
+      - pattern-either:
+          # Nilai disimpan ke variabel atau field yang dinamai rahasia.
+          - patterns:
+              - pattern-either:
+                  - pattern: $V := <... rand.$F(...) ...>
+                  - pattern: $V = <... rand.$F(...) ...>
+              - metavariable-regex:
+                  metavariable: $V
+                  regex: (?i)^(\w+\.)?\w*(token|otp|passw(or)?d|sandi|salt|nonce|secret|api_?key|session|kunci|pin|captcha)\w*$
+          # Pembangkit sendiri: r := rand.New(...) lalu r.Intn(...).
+          - patterns:
+              - pattern-either:
+                  - pattern: $V := <... $R.$F(...) ...>
+                  - pattern: $V = <... $R.$F(...) ...>
+              - pattern-either:
+                  - pattern-inside: |
+                      $R := rand.New(...)
+                      ...
+                  - pattern-inside: |
+                      $R = rand.New(...)
+                      ...
+              - metavariable-regex:
+                  metavariable: $V
+                  regex: (?i)^(\w+\.)?\w*(token|otp|passw(or)?d|sandi|salt|nonce|secret|api_?key|session|kunci|pin|captcha)\w*$
+          # Fungsi yang namanya menyatakan nilai rahasia.
+          - patterns:
+              - pattern: rand.$F(...)
+              # rand.New/NewSource/Seed hanya menyiapkan pembangkit; yang
+              # menghasilkan nilai rahasia adalah pemanggilan berikutnya.
+              - metavariable-regex:
+                  metavariable: $F
+                  regex: ^(Int|Intn|Int31|Int31n|Int63|Int63n|Uint32|Uint64|Float32|Float64|Perm|Read|Shuffle|N)$
+              - pattern-either:
+                  - pattern-inside: |
+                      func $NAME(...) $T {
+                        ...
+                      }
+                  - pattern-inside: |
+                      func $NAME(...) ($T, $E) {
+                        ...
+                      }
+                  - pattern-inside: |
+                      func $NAME(...) {
+                        ...
+                      }
+              - metavariable-regex:
+                  metavariable: $NAME
+                  regex: (?i)^\w*(token|otp|passw(or)?d|sandi|salt|nonce|secret|api_?key|session|kunci|captcha)\w*$
+    paths:
+      exclude: ["*_test.go"]
+    metadata:
+      judul: "Nilai rahasia dibuat dengan math/rand (Go)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator (PRNG)"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: MEDIUM
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [go]
+      references:
+        - https://pkg.go.dev/crypto/rand
+        - https://cwe.mitre.org/data/definitions/338.html
+  - id: go-math-rand-string-generator
+    languages: [go]
+    severity: INFO
+    message: >-
+      Pembangkit string acak ini memakai math/rand. Bila hasilnya dipakai
+      sebagai token, OTP, sandi, kunci, atau id sesi, nilainya dapat ditebak:
+      math/rand deterministik terhadap benihnya. Telusuri pemanggil fungsi ini;
+      untuk nilai yang harus tidak dapat ditebak, pakai crypto/rand.
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              import "math/rand"
+              ...
+          - pattern-inside: |
+              import "math/rand/v2"
+              ...
+      - pattern-not-inside: |
+          import $ALIAS "math/rand"
+          ...
+      - pattern-not-inside: |
+          import $ALIAS "math/rand/v2"
+          ...
+      - pattern-inside: |
+          for ... {
+            ...
+          }
+      - pattern-either:
+          - pattern: $B[$I] = $C[rand.$F(...)]
+          - pattern: $B = append($B, $C[rand.$F(...)])
+          - pattern: $SB.$W($C[rand.$F(...)])
+      - metavariable-regex:
+          metavariable: $F
+          regex: ^(Int|Intn|Int31|Int31n|Int63|Int63n|Uint32|Uint64|N)$
+    paths:
+      exclude: ["*_test.go"]
+    metadata:
+      judul: "Pembangkit string acak memakai math/rand (Go)"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator (PRNG)"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: LOW
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [go]
+      references:
+        - https://pkg.go.dev/crypto/rand

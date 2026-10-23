@@ -1,0 +1,41 @@
+rules:
+- id: sqlite_injection
+  patterns:
+  - pattern-not: $DB.execSQL("..." , ...);
+  - pattern-not: $DB.rawQuery("..." , ...);
+  - pattern-either:
+    - pattern: '$DB.rawQuery("..." + $INP + "..." , ...);
+
+        '
+    - pattern: '$DB.rawQuery($INP + "..." , ... );
+
+        '
+    - pattern: '$DB.rawQuery($INP + "..." + $INP2, ...);
+
+        '
+    - pattern: '$DB.rawQuery($INP + "..." + $INP2 + "...", ...);
+
+        '
+    - pattern: '$DB.execSQL($INP + "..." , ...);
+
+        '
+    - pattern: '$DB.execSQL("..." + $INP + "..." , ...);
+
+        '
+    - pattern: '$DB.execSQL($INP + "..." + $INP2, ...);
+
+        '
+    - pattern: '$DB.execSQL($INP + "..." + $INP2 + "...", ...);
+
+        '
+  message: SQL query text is built dynamically. Untrusted values in the query can cause SQL injection;
+    use fixed SQL with bind arguments.
+  languages:
+  - java
+  severity: WARNING
+  metadata:
+    cwe: cwe-89
+    owasp-mobile: m7
+    masvs: platform-2
+    reference: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x04h-Testing-Code-Quality.md#injection-flaws-mstg-arch-2-and-mstg-platform-2
+    confidence: MEDIUM

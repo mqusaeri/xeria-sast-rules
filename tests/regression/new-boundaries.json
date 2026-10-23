@@ -1,0 +1,401 @@
+[
+  {
+    "name": "pytorch_unsafe",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pytorch-unsafe-load.yaml",
+    "rule_ids": [
+      "xeria-pytorch-unsafe-pickle-load"
+    ],
+    "filename": "case.py",
+    "code": "import torch\nmodel = torch.load(path, weights_only=False)\n",
+    "expect": [
+      {
+        "id": "xeria-pytorch-unsafe-pickle-load",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "pytorch_alias",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pytorch-unsafe-load.yaml",
+    "rule_ids": [
+      "xeria-pytorch-unsafe-pickle-load"
+    ],
+    "filename": "case.py",
+    "code": "import torch as t\nmodel = t.load(path, weights_only=False)\n",
+    "expect": [
+      {
+        "id": "xeria-pytorch-unsafe-pickle-load",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "pytorch_weights_only",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pytorch-unsafe-load.yaml",
+    "rule_ids": [
+      "xeria-pytorch-unsafe-pickle-load"
+    ],
+    "filename": "case.py",
+    "code": "import torch\nmodel = torch.load(path, weights_only=True)\n",
+    "expect": []
+  },
+  {
+    "name": "pytorch_default_not_assumed",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pytorch-unsafe-load.yaml",
+    "rule_ids": [
+      "xeria-pytorch-unsafe-pickle-load"
+    ],
+    "filename": "case.py",
+    "code": "import torch\nmodel = torch.load(path)\n",
+    "expect": []
+  },
+  {
+    "name": "transformers_remote_code",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/transformers-remote-code.yaml",
+    "rule_ids": [
+      "xeria-transformers-remote-code-trust"
+    ],
+    "filename": "case.py",
+    "code": "from transformers import AutoModel\nmodel = AutoModel.from_pretrained(repo, trust_remote_code=True)\n",
+    "expect": [
+      {
+        "id": "xeria-transformers-remote-code-trust",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "transformers_alias",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/transformers-remote-code.yaml",
+    "rule_ids": [
+      "xeria-transformers-remote-code-trust"
+    ],
+    "filename": "case.py",
+    "code": "from transformers import AutoTokenizer as Tokenizer\nmodel = Tokenizer.from_pretrained(repo, trust_remote_code=True)\n",
+    "expect": [
+      {
+        "id": "xeria-transformers-remote-code-trust",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "transformers_no_custom_code",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/transformers-remote-code.yaml",
+    "rule_ids": [
+      "xeria-transformers-remote-code-trust"
+    ],
+    "filename": "case.py",
+    "code": "from transformers import AutoModel\nmodel = AutoModel.from_pretrained(repo, trust_remote_code=False)\n",
+    "expect": []
+  },
+  {
+    "name": "jwt_audience_disabled",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pyjwt-audience-disabled.yaml",
+    "rule_ids": [
+      "xeria-pyjwt-audience-check-disabled"
+    ],
+    "filename": "case.py",
+    "code": "import jwt\nclaims = jwt.decode(token, key, algorithms=[\"RS256\"], options={\"verify_aud\":False})\n",
+    "expect": [
+      {
+        "id": "xeria-pyjwt-audience-check-disabled",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "jwt_audience_alias",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pyjwt-audience-disabled.yaml",
+    "rule_ids": [
+      "xeria-pyjwt-audience-check-disabled"
+    ],
+    "filename": "case.py",
+    "code": "import jwt as tokens\nclaims = tokens.decode(token, key, algorithms=[\"RS256\"], options={\"verify_aud\":False})\n",
+    "expect": [
+      {
+        "id": "xeria-pyjwt-audience-check-disabled",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "jwt_audience_enabled",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pyjwt-audience-disabled.yaml",
+    "rule_ids": [
+      "xeria-pyjwt-audience-check-disabled"
+    ],
+    "filename": "case.py",
+    "code": "import jwt\nclaims = jwt.decode(token, key, algorithms=[\"RS256\"], options={\"verify_aud\":True})\n",
+    "expect": []
+  },
+  {
+    "name": "jwt_issuer_disabled",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pyjwt-issuer-disabled.yaml",
+    "rule_ids": [
+      "xeria-pyjwt-issuer-check-disabled"
+    ],
+    "filename": "case.py",
+    "code": "import jwt\nclaims = jwt.decode(token, key, algorithms=[\"RS256\"], options={\"verify_iss\":False})\n",
+    "expect": [
+      {
+        "id": "xeria-pyjwt-issuer-check-disabled",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "jwt_issuer_alias",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pyjwt-issuer-disabled.yaml",
+    "rule_ids": [
+      "xeria-pyjwt-issuer-check-disabled"
+    ],
+    "filename": "case.py",
+    "code": "import jwt as tokens\nclaims = tokens.decode(token, key, algorithms=[\"RS256\"], options={\"verify_iss\":False})\n",
+    "expect": [
+      {
+        "id": "xeria-pyjwt-issuer-check-disabled",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "jwt_issuer_enabled",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pyjwt-issuer-disabled.yaml",
+    "rule_ids": [
+      "xeria-pyjwt-issuer-check-disabled"
+    ],
+    "filename": "case.py",
+    "code": "import jwt\nclaims = jwt.decode(token, key, algorithms=[\"RS256\"], options={\"verify_iss\":True})\n",
+    "expect": []
+  },
+  {
+    "name": "jwt_fail_open",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pyjwt-fail-open.yaml",
+    "rule_ids": [
+      "xeria-pyjwt-verification-fail-open"
+    ],
+    "filename": "case.py",
+    "code": "import jwt\ndef allowed(token, key):\n    try:\n        jwt.decode(token, key, algorithms=[\"RS256\"])\n    except jwt.InvalidTokenError:\n        return True\n    return False\n",
+    "expect": [
+      {
+        "id": "xeria-pyjwt-verification-fail-open",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "jwt_fail_closed",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pyjwt-fail-open.yaml",
+    "rule_ids": [
+      "xeria-pyjwt-verification-fail-open"
+    ],
+    "filename": "case.py",
+    "code": "import jwt\ndef allowed(token, key):\n    try:\n        jwt.decode(token, key, algorithms=[\"RS256\"])\n    except jwt.InvalidTokenError:\n        return False\n    return False\n",
+    "expect": []
+  },
+  {
+    "name": "jwt_unrelated_exception",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pyjwt-fail-open.yaml",
+    "rule_ids": [
+      "xeria-pyjwt-verification-fail-open"
+    ],
+    "filename": "case.py",
+    "code": "import jwt\ndef allowed(token, key):\n    try:\n        jwt.decode(token, key, algorithms=[\"RS256\"])\n    except KeyError:\n        return True\n    return False\n",
+    "expect": []
+  },
+  {
+    "name": "jwt_fail_open_alias",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/pyjwt-fail-open.yaml",
+    "rule_ids": [
+      "xeria-pyjwt-verification-fail-open"
+    ],
+    "filename": "case.py",
+    "code": "import jwt as tokens\ndef allowed(token, key):\n    try:\n        tokens.decode(token, key, algorithms=[\"RS256\"])\n    except Exception:\n        return True\n    return False\n",
+    "expect": [
+      {
+        "id": "xeria-pyjwt-verification-fail-open",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "node_jwt_fail_open",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/node-jwt-fail-open.yaml",
+    "rule_ids": [
+      "xeria-node-jwt-verification-fail-open"
+    ],
+    "filename": "case.js",
+    "code": "const jwt = require(\"jsonwebtoken\");\nfunction allowed(token,key) {\n try { jwt.verify(token,key); } catch(err) { return true; }\n return false;\n}\n",
+    "expect": [
+      {
+        "id": "xeria-node-jwt-verification-fail-open",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "node_jwt_fail_closed",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/node-jwt-fail-open.yaml",
+    "rule_ids": [
+      "xeria-node-jwt-verification-fail-open"
+    ],
+    "filename": "case.js",
+    "code": "const jwt = require(\"jsonwebtoken\");\nfunction allowed(token,key) {\n try { jwt.verify(token,key); } catch(err) { return false; }\n return false;\n}\n",
+    "expect": []
+  },
+  {
+    "name": "node_custom_verify",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/node-jwt-fail-open.yaml",
+    "rule_ids": [
+      "xeria-node-jwt-verification-fail-open"
+    ],
+    "filename": "case.js",
+    "code": "const jwt = require(\"my-validator\");\nfunction allowed(token,key) {\n try { jwt.verify(token,key); } catch(err) { return true; }\n return false;\n}\n",
+    "expect": []
+  },
+  {
+    "name": "stripe_fail_open",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/stripe-webhook-fail-open.yaml",
+    "rule_ids": [
+      "xeria-stripe-webhook-verification-fail-open"
+    ],
+    "filename": "case.py",
+    "code": "import stripe\ndef accepted(payload, signature, key):\n    try:\n        stripe.Webhook.construct_event(payload, signature, key)\n    except stripe.error.SignatureVerificationError:\n        return True\n    return False\n",
+    "expect": [
+      {
+        "id": "xeria-stripe-webhook-verification-fail-open",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "stripe_fail_closed",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/stripe-webhook-fail-open.yaml",
+    "rule_ids": [
+      "xeria-stripe-webhook-verification-fail-open"
+    ],
+    "filename": "case.py",
+    "code": "import stripe\ndef accepted(payload, signature, key):\n    try:\n        stripe.Webhook.construct_event(payload, signature, key)\n    except stripe.error.SignatureVerificationError:\n        return False\n    return False\n",
+    "expect": []
+  },
+  {
+    "name": "stripe_unrelated_exception",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/stripe-webhook-fail-open.yaml",
+    "rule_ids": [
+      "xeria-stripe-webhook-verification-fail-open"
+    ],
+    "filename": "case.py",
+    "code": "import stripe\ndef accepted(payload, signature, key):\n    try:\n        stripe.Webhook.construct_event(payload, signature, key)\n    except KeyError:\n        return True\n    return False\n",
+    "expect": []
+  },
+  {
+    "name": "tar_trusted_filter",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/tarfile-fully-trusted.yaml",
+    "rule_ids": [
+      "xeria-tarfile-fully-trusted-extraction"
+    ],
+    "filename": "case.py",
+    "code": "import tarfile\nwith tarfile.open(path) as archive:\n    archive.extractall(dest, filter=\"fully_trusted\")\n",
+    "expect": [
+      {
+        "id": "xeria-tarfile-fully-trusted-extraction",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "tar_data_filter",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/tarfile-fully-trusted.yaml",
+    "rule_ids": [
+      "xeria-tarfile-fully-trusted-extraction"
+    ],
+    "filename": "case.py",
+    "code": "import tarfile\nwith tarfile.open(path) as archive:\n    archive.extractall(dest, filter=\"data\")\n",
+    "expect": []
+  },
+  {
+    "name": "tar_alias_trusted_filter",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/tarfile-fully-trusted.yaml",
+    "rule_ids": [
+      "xeria-tarfile-fully-trusted-extraction"
+    ],
+    "filename": "case.py",
+    "code": "import tarfile as tar\narchive = tar.open(path)\narchive.extractall(dest, filter=\"fully_trusted\")\n",
+    "expect": [
+      {
+        "id": "xeria-tarfile-fully-trusted-extraction",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "transformers_pipeline_remote_code",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/transformers-remote-code.yaml",
+    "rule_ids": [
+      "xeria-transformers-remote-code-trust"
+    ],
+    "filename": "case.py",
+    "code": "from transformers import pipeline\nmodel = pipeline(\"text-generation\", model=repo, trust_remote_code=True)\n",
+    "expect": [
+      {
+        "id": "xeria-transformers-remote-code-trust",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "transformers_pipeline_default",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/transformers-remote-code.yaml",
+    "rule_ids": [
+      "xeria-transformers-remote-code-trust"
+    ],
+    "filename": "case.py",
+    "code": "from transformers import pipeline\nmodel = pipeline(\"text-generation\", model=repo)\n",
+    "expect": []
+  },
+  {
+    "name": "tar_explicit_trusted_callback",
+    "pack": "xeria-rules",
+    "rule_file": "rules/security-boundaries/tarfile-fully-trusted.yaml",
+    "rule_ids": [
+      "xeria-tarfile-fully-trusted-extraction"
+    ],
+    "filename": "case.py",
+    "code": "import tarfile\nwith tarfile.open(path) as archive:\n    archive.extractall(dest, filter=tarfile.fully_trusted_filter)\n",
+    "expect": [
+      {
+        "id": "xeria-tarfile-fully-trusted-extraction",
+        "line": 3
+      }
+    ]
+  }
+]

@@ -1,0 +1,33 @@
+# Koneksi basis data tanpa TLS ke server di internet.
+#
+# Diukur di Puspalad: infra/development.yaml menyambung ke PostgreSQL di IP
+# publik dengan ssl-mode: disable. Alamat jaringan privat, localhost, dan nama
+# layanan Docker tidak dilaporkan — lalu lintasnya tidak melewati internet.
+rules:
+  - id: database-tls-disabled-public-host
+    languages: [regex]
+    paths:
+      include: ["*.yaml", "*.yml", "*.env", "*.env.*", ".env*", "*.toml", "*.json", "*.properties", "*.ini", "*.conf"]
+    severity: WARNING
+    message: >-
+      Koneksi basis data ke alamat IP publik dengan TLS dimatikan (sslmode /
+      ssl-mode disable). Username, password, dan seluruh isi query berjalan
+      tanpa enkripsi di internet dan dapat disadap atau diubah di jalur mana
+      pun. Setel sslmode ke require (atau verify-full), dan bila memungkinkan
+      jangan buka port basis data ke internet.
+    # Syarat: di berkas yang sama ada host berupa IP publik. Laporan jatuh
+    # pada baris sslmode.
+    pattern-regex: >-
+      (?is)\A(?=.*?(?:(?:\b|_)host\s*[:=]\s*["']?|@)(?!(?:10|127)\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.|169\.254\.|0\.)\d{1,3}(?:\.\d{1,3}){3}\b).*?\K\bssl[-_]?mode\s*[:=]\s*["']?disable\b
+    metadata:
+      judul: "Koneksi basis data ke IP publik tanpa TLS"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-319: Cleartext Transmission of Sensitive Information"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [postgresql, database, go]
+      references:
+        - https://www.postgresql.org/docs/current/libpq-ssl.html#LIBPQ-SSL-SSLMODE-STATEMENTS

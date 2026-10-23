@@ -1,0 +1,59 @@
+rules:
+  - id: laravel-raw-query-taint
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Query mentah Laravel disusun dari input request. Penyerang dapat
+      menyisipkan perintah SQL lewat parameter tersebut. Gunakan binding
+      parameter, misalnya DB::select('... WHERE id = ?', [$id]) atau
+      whereRaw('id = ?', [$id]), atau query builder/Eloquent biasa.
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: $_GET
+          - pattern: $_POST
+          - pattern: $_REQUEST
+          - pattern: $_COOKIE
+          - pattern: request(...)
+          - pattern: Request::input(...)
+          # Hanya objek request. Tanpa batasan nama, `$REQUEST->get(...)`
+          # juga cocok dengan `User::whereRaw(...)->get()` — hasil query
+          # dianggap input pengguna.
+          - patterns:
+              - pattern-either:
+                  - pattern: $REQUEST->input(...)
+                  - pattern: $REQUEST->get(...)
+                  - pattern: $REQUEST->query(...)
+                  - pattern: $REQUEST->post(...)
+                  - pattern: $REQUEST->all()
+              - metavariable-regex:
+                  metavariable: $REQUEST
+                  regex: ^\$(request|req|this->request)$
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: DB::select($SQL, ...)
+              - pattern: DB::statement($SQL, ...)
+              - pattern: DB::unprepared($SQL, ...)
+              - pattern: DB::raw($SQL)
+              - pattern: $Q->whereRaw($SQL, ...)
+              - pattern: $Q->selectRaw($SQL, ...)
+              - pattern: $Q->orderByRaw($SQL, ...)
+              - pattern: $Q->havingRaw($SQL, ...)
+          - focus-metavariable: $SQL
+    pattern-sanitizers:
+      - pattern: intval(...)
+      - pattern: (int) $X
+    metadata:
+      judul: "SQL Injection pada query mentah (Laravel)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [laravel, php, eloquent]
+      references:
+        - https://laravel.com/docs/queries#raw-expressions
+        - https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html

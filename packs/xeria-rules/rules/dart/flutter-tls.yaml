@@ -1,0 +1,96 @@
+# Flutter/Dart: validasi sertifikat dan lalu lintas tanpa enkripsi.
+rules:
+  - id: dart-bad-certificate-callback-accept-all
+    languages: [dart]
+    severity: ERROR
+    message: >-
+      Validasi sertifikat TLS dimatikan: badCertificateCallback selalu
+      mengembalikan true, sehingga aplikasi menerima sertifikat palsu dan
+      penyerang di jaringan yang sama (Wi-Fi publik, proxy) dapat membaca serta
+      mengubah seluruh lalu lintas HTTPS. Hapus callback ini; untuk pinning,
+      bandingkan sidik jari sertifikat dengan nilai yang diharapkan.
+    pattern-either:
+      - pattern: |
+          $C.badCertificateCallback = ($CERT, $HOST, $PORT) => true;
+      - pattern: |
+          $C.badCertificateCallback = ($CERT, $HOST, $PORT) { return true; };
+    metadata:
+      judul: "Validasi sertifikat TLS dimatikan lewat badCertificateCallback (Dart)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-295: Improper Certificate Validation"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [flutter, dart]
+      references:
+        - https://api.flutter.dev/flutter/dart-io/HttpClient/badCertificateCallback.html
+        - https://mas.owasp.org/MASTG/tests/android/MASVS-NETWORK/MASTG-TEST-0021/
+
+  - id: dart-dio-validate-certificate-accept-all
+    languages: [dart]
+    severity: ERROR
+    message: >-
+      Validasi sertifikat Dio dimatikan: validateCertificate pada
+      IOHttpClientAdapter selalu mengembalikan true, sehingga sertifikat apa
+      pun — termasuk buatan penyerang — diterima dan lalu lintas HTTPS dapat
+      disadap serta diubah. Hapus callback ini, atau bandingkan sidik jari
+      sertifikat (cert.der) dengan pin yang diharapkan.
+    pattern-either:
+      - pattern: 'IOHttpClientAdapter(..., validateCertificate: ($CERT, $HOST, $PORT) => true, ...)'
+      - pattern: 'IOHttpClientAdapter(..., validateCertificate: ($CERT, $HOST, $PORT) { return true; }, ...)'
+      - pattern: '$A.validateCertificate = ($CERT, $HOST, $PORT) => true'
+      - pattern: '$A.validateCertificate = ($CERT, $HOST, $PORT) { return true; }'
+    metadata:
+      judul: "Validasi sertifikat TLS pada Dio dimatikan (Dart)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-295: Improper Certificate Validation"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [flutter, dart, dio]
+      references:
+        - https://pub.dev/documentation/dio/latest/io/IOHttpClientAdapter/validateCertificate.html
+        - https://mas.owasp.org/MASTG/tests/android/MASVS-NETWORK/MASTG-TEST-0021/
+
+  - id: dart-cleartext-http-url
+    languages: [dart]
+    severity: WARNING
+    message: >-
+      Alamat server ditulis dengan http:// atau ws:// biasa. Permintaan ke
+      alamat ini — termasuk token login dan data yang dikirim — berjalan tanpa
+      enkripsi dan dapat dibaca atau diubah siapa pun di jaringan yang sama.
+      Pakai https:// dan wss://.
+    patterns:
+      - pattern-either:
+          - pattern: Uri.parse("$URL")
+          - pattern: Uri.parse("$URL" + $REST)
+          - pattern: '$HTTP.get("$URL", ...)'
+          - pattern: '$HTTP.post("$URL", ...)'
+          - pattern: 'BaseOptions(..., baseUrl: "$URL", ...)'
+          - pattern: '$OPTS.baseUrl = "$URL"'
+          - pattern: WebSocketChannel.connect(Uri.parse("$URL"), ...)
+          - pattern: IOWebSocketChannel.connect("$URL", ...)
+          - pattern: WebSocket.connect("$URL", ...)
+      - metavariable-regex:
+          metavariable: $URL
+          # Sama dengan aturan JavaScript cleartext-http-request: loopback,
+          # emulator Android (10.0.2.2), alamat jaringan privat, dan domain
+          # .local/.internal/.test tidak dilaporkan — umumnya konfigurasi
+          # pengembangan, bukan jalur yang dilewati pengguna.
+          regex: ^["']?(http|ws)://(?!localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[::1\]|[\w.-]+\.(local|localhost|internal|test)\b)[^\s"'$]
+    metadata:
+      judul: "Alamat server memakai http:// atau ws:// tanpa enkripsi (Dart)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-319: Cleartext Transmission of Sensitive Information"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [flutter, dart]
+      references:
+        - https://mas.owasp.org/MASTG/tests/android/MASVS-NETWORK/MASTG-TEST-0019/

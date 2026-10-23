@@ -1,0 +1,62 @@
+rules:
+- id: ios_tls3_not_used
+  message: TLS 1.0 or TLS 1.1 is allowed as the minimum protocol. Use TLS 1.2 or TLS 1.3 with an appropriate
+    cipher policy.
+  languages:
+  - swift
+  severity: ERROR
+  metadata:
+    cwe: cwe-757
+    masvs: network-2
+    owasp-mobile: m3
+    reference: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x04f-Testing-Network-Communication.md#verifying-data-encryption-on-the-network-mstg-network-1-and-mstg-network-2
+    confidence: HIGH
+  pattern-either:
+  - pattern: $C.tlsMinimumSupportedProtocolVersion = .TLSv10
+  - pattern: $C.tlsMinimumSupportedProtocolVersion = tls_protocol_version_t.TLSv10
+  - pattern: $C.tlsMinimumSupportedProtocolVersion = .TLSv11
+  - pattern: $C.tlsMinimumSupportedProtocolVersion = tls_protocol_version_t.TLSv11
+- id: ios_tls12_used
+  message: TLS 1.2 is configured as the minimum protocol. This is not inherently insecure. Review whether
+    the application can require TLS 1.3 without breaking required interoperability.
+  languages:
+  - swift
+  severity: INFO
+  metadata:
+    cwe: cwe-757
+    masvs: network-2
+    owasp-mobile: m3
+    reference: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x04f-Testing-Network-Communication.md#verifying-data-encryption-on-the-network-mstg-network-1-and-mstg-network-2
+    confidence: LOW
+    subcategory:
+    - audit
+  pattern-either:
+  - pattern: $C.tlsMinimumSupportedProtocolVersion = .TLSv12
+  - pattern: $C.tlsMinimumSupportedProtocolVersion = tls_protocol_version_t.TLSv12
+- id: ios_dtls1_used
+  message: DTLS 1.2 should be used. Detected old version - DTLS 1.0.
+  languages:
+  - swift
+  severity: WARNING
+  metadata:
+    cwe: cwe-757
+    masvs: network-2
+    owasp-mobile: m3
+    reference: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x04f-Testing-Network-Communication.md#verifying-data-encryption-on-the-network-mstg-network-1-and-mstg-network-2
+    confidence: HIGH
+  pattern-either:
+  - pattern: $C.tlsMinimumSupportedProtocolVersion = .DTLSv10
+  - pattern: $C.tlsMinimumSupportedProtocolVersion = tls_protocol_version_t.DTLSv10
+- id: ios_depr_tls_min
+  patterns:
+  - pattern-regex: \.tlsMinimumSupportedProtocol\b
+  message: Use of deprecated property tlsMinimumSupportedProtocol. To avoid potential security risks,
+    use tlsMinimumSupportedProtocolVersion
+  languages:
+  - swift
+  severity: WARNING
+  metadata:
+    cwe: cwe-757
+    masvs: network-2
+    owasp-mobile: m3
+    reference: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x04f-Testing-Network-Communication.md#verifying-data-encryption-on-the-network-mstg-network-1-and-mstg-network-2

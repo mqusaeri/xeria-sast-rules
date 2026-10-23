@@ -1,0 +1,29 @@
+rules:
+- id: mcp-tool-poisoning-generic
+  languages:
+  - python
+  severity: WARNING
+  message: An MCP tool docstring contains a suspicious instruction indicator. Review its trust and intended
+    behavior. This heuristic is not proof of tool poisoning and does not validate descriptions without
+    these phrases.
+  metadata:
+    cwe: 'CWE-20: Improper Input Validation'
+    category: security
+    confidence: LOW
+    subcategory:
+    - audit
+    likelihood: MEDIUM
+    impact: HIGH
+    technology:
+    - mcp
+    references:
+    - https://modelcontextprotocol.io/specification/draft/basic/security_best_practices
+  paths:
+    include:
+    - '*.py'
+  patterns:
+  - pattern: "@$SERVER.tool(...)\ndef $FUNC(...):\n    $DOC\n    ...\n"
+  - metavariable-regex:
+      metavariable: $DOC
+      regex: (?is).*(?:<IMPORTANT>|~/\.ssh|~/\.cursor/mcp\.json|/etc/shadow|(?:read|cat|load|parse|open|access)\s+\.env|do
+        not mention|do not tell the user|ignore previous instructions).*

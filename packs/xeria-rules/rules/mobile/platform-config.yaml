@@ -1,0 +1,167 @@
+# Setelan platform Android dan iOS yang melemahkan aplikasi seluler —
+# berlaku untuk Flutter, React Native, maupun aplikasi native.
+#
+# Semuanya regex atas berkas konfigurasi, bukan kode. Manifest di src/debug
+# dan src/profile dikecualikan: berkas itu hanya ikut di build pengembangan.
+rules:
+  - id: android-cleartext-traffic-permitted
+    languages: [regex]
+    paths:
+      include: ["*.xml"]
+      exclude: ["*/src/debug/*", "*/src/profile/*"]
+    severity: WARNING
+    message: >-
+      Aplikasi Android mengizinkan koneksi http:// biasa ke semua alamat
+      (usesCleartextTraffic atau cleartextTrafficPermitted di base-config).
+      Setiap permintaan tanpa TLS — termasuk token login — dapat dibaca dan
+      diubah di jaringan yang sama. Setel ke false; bila satu server internal
+      memang belum mendukung HTTPS, izinkan hanya domain itu lewat
+      domain-config.
+    pattern-either:
+      - pattern-regex: android:usesCleartextTraffic\s*=\s*"true"
+      - pattern-regex: <base-config\b[^>]*\bcleartextTrafficPermitted\s*=\s*"true"
+    metadata:
+      judul: "Aplikasi Android mengizinkan lalu lintas HTTP tanpa enkripsi"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-319: Cleartext Transmission of Sensitive Information"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [android, flutter, react-native]
+      references:
+        - https://developer.android.com/privacy-and-security/security-config#CleartextTrafficPermitted
+        - https://mas.owasp.org/MASTG/tests/android/MASVS-NETWORK/MASTG-TEST-0019/
+
+  - id: android-network-config-trusts-user-certificates
+    languages: [regex]
+    paths:
+      include: ["*.xml"]
+      exclude: ["*/src/debug/*", "*/src/profile/*"]
+    severity: WARNING
+    message: >-
+      Konfigurasi keamanan jaringan mempercayai sertifikat CA yang dipasang
+      pengguna (certificates src="user") di luar debug-overrides. Siapa pun
+      yang dapat memasang CA di perangkat — termasuk malware atau alat
+      penyadap — dapat membaca lalu lintas HTTPS aplikasi. Pindahkan ke
+      <debug-overrides> atau hapus.
+    # Laporan jatuh pada baris pembuka base-config/domain-config yang memuatnya.
+    pattern-regex: (?s)<(base-config|domain-config)\b(?:(?!</\1>).)*?<certificates\s+src\s*=\s*"user"
+    metadata:
+      judul: "Android mempercayai sertifikat CA yang dipasang pengguna"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-295: Improper Certificate Validation"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: LOW
+      impact: HIGH
+      technology: [android, flutter, react-native]
+      references:
+        - https://developer.android.com/privacy-and-security/security-config#TrustingDebugCa
+        - https://mas.owasp.org/MASTG/tests/android/MASVS-NETWORK/MASTG-TEST-0021/
+
+  - id: android-debuggable-enabled
+    languages: [regex]
+    paths:
+      include: ["*AndroidManifest.xml"]
+      exclude: ["*/src/debug/*", "*/src/profile/*"]
+    severity: ERROR
+    message: >-
+      android:debuggable="true" di manifest utama. Aplikasi rilis yang dapat
+      di-debug memungkinkan siapa pun dengan kabel USB membaca data
+      aplikasi (run-as), memasang debugger, dan mengubah jalannya aplikasi.
+      Hapus atribut ini; Gradle sudah menyetelnya otomatis untuk build debug.
+    pattern-regex: android:debuggable\s*=\s*"true"
+    metadata:
+      judul: "Aplikasi Android dapat di-debug (debuggable)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-489: Active Debug Code"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: LOW
+      impact: HIGH
+      technology: [android, flutter, react-native]
+      references:
+        - https://developer.android.com/privacy-and-security/risks/android-debuggable
+        - https://mas.owasp.org/MASTG/tests/android/MASVS-RESILIENCE/MASTG-TEST-0039/
+
+  - id: android-allow-backup-enabled
+    languages: [regex]
+    paths:
+      include: ["*AndroidManifest.xml"]
+      exclude: ["*/src/debug/*", "*/src/profile/*"]
+    severity: INFO
+    message: >-
+      android:allowBackup="true": data aplikasi — basis data lokal dan
+      SharedPreferences — ikut dicadangkan dan dapat dipulihkan ke perangkat
+      lain. Bila aplikasi menyimpan data dinas atau token di perangkat, setel
+      ke false atau batasi lewat dataExtractionRules.
+    pattern-regex: android:allowBackup\s*=\s*"true"
+    metadata:
+      judul: "Data aplikasi Android ikut dicadangkan (allowBackup)"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-530: Exposure of Backup File to an Unauthorized Control Sphere"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: LOW
+      impact: LOW
+      technology: [android, flutter, react-native]
+      references:
+        - https://developer.android.com/privacy-and-security/risks/backup-best-practices
+        - https://mas.owasp.org/MASTG/tests/android/MASVS-STORAGE/MASTG-TEST-0009/
+
+  - id: android-fileprovider-root-path
+    languages: [regex]
+    paths:
+      include: ["*.xml"]
+    severity: WARNING
+    message: >-
+      FileProvider mendaftarkan <root-path> — seluruh sistem berkas perangkat,
+      termasuk folder data aplikasi — sebagai lokasi yang dapat dibagikan
+      lewat content:// URI. Satu URI yang dibangun dari nama berkas yang
+      dapat dipengaruhi pihak luar cukup untuk membocorkan berkas internal
+      (token, basis data). Daftarkan hanya folder yang memang dibagikan,
+      mis. <cache-path path="shared/"/>.
+    pattern-regex: <root-path\b[^>]*>
+    metadata:
+      judul: "FileProvider Android membagikan root sistem berkas"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-552: Files or Directories Accessible to External Parties"
+      owasp: "A01:2021 - Broken Access Control"
+      confidence: HIGH
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [android, flutter, react-native]
+      references:
+        - https://developer.android.com/privacy-and-security/risks/file-providers
+        - https://blog.oversecured.com/Gaining-access-to-arbitrary-Content-Providers/
+
+  - id: ios-ats-allows-arbitrary-loads
+    languages: [regex]
+    paths:
+      include: ["*Info.plist"]
+    severity: WARNING
+    message: >-
+      App Transport Security dimatikan (NSAllowsArbitraryLoads = true):
+      aplikasi iOS boleh memakai http:// biasa dan TLS lemah ke alamat mana
+      pun. Hapus kunci ini; bila satu server memang belum mendukung HTTPS,
+      buat pengecualian khusus domain itu di NSExceptionDomains.
+    pattern-regex: <key>\s*NSAllowsArbitraryLoads(InWebContent)?\s*</key>\s*<true\s*/>
+    metadata:
+      judul: "App Transport Security iOS dimatikan"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-319: Cleartext Transmission of Sensitive Information"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [ios, flutter, react-native]
+      references:
+        - https://developer.apple.com/documentation/bundleresources/information_property_list/nsapptransportsecurity
+        - https://mas.owasp.org/MASTG/tests/ios/MASVS-NETWORK/MASTG-TEST-0065/

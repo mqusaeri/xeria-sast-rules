@@ -1,0 +1,31 @@
+rules:
+- id: xeria-transformers-remote-code-trust
+  languages:
+  - python
+  severity: WARNING
+  message: Loader Transformers mengizinkan custom code dari repository model. Tinjau kode dan provenance,
+    batasi sumber, serta pin revision yang telah diaudit sebelum trust_remote_code=True digunakan. Flag
+    ini menunjukkan izin eksekusi; repository terpercaya yang diaudit dapat menjadi pengecualian yang
+    sah.
+  metadata:
+    judul: Eksekusi kode repository model diizinkan
+    category: security
+    subcategory:
+    - audit
+    cwe: 'CWE-829: Inclusion of Functionality from Untrusted Control Sphere'
+    owasp: A03:2025 - Software Supply Chain Failures
+    confidence: HIGH
+    likelihood: MEDIUM
+    impact: HIGH
+    technology:
+    - python
+    - transformers
+    - huggingface
+    references:
+    - https://huggingface.co/docs/transformers/custom_models
+    tested-engine: OpenGrep 1.29.0
+    limitations: Pemeriksaan pola API eksplisit; kontrol di wrapper atau pipeline lain memerlukan penilaian
+      integrasi.
+  pattern-either:
+  - pattern: transformers.$MODEL.from_pretrained(..., trust_remote_code=True, ...)
+  - pattern: transformers.pipeline(..., trust_remote_code=True, ...)

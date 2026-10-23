@@ -1,0 +1,325 @@
+# Flutter/Dart: penyimpanan, log, basis data lokal, keacakan, WebView, dan
+# pembaruan aplikasi.
+#
+# Diukur di E-Office TNI AD Mobile, ETWPAD, dan XERIA sendiri. Random() di
+# E-Office dipakai untuk nama berkas unduhan dan id coretan PDF — bukan
+# keamanan — sehingga aturan keacakan hanya berlaku bila nilainya dinamai
+# sebagai token, OTP, sandi, salt, nonce, atau kunci.
+rules:
+  - id: dart-sensitive-data-shared-preferences
+    languages: [dart]
+    severity: WARNING
+    message: >-
+      Token, sandi, atau rahasia lain disimpan di SharedPreferences/GetStorage.
+      Penyimpanan ini berupa berkas teks biasa di folder data aplikasi: terbaca
+      pada perangkat yang di-root, dari cadangan (backup) perangkat, atau oleh
+      malware dengan akses berkas. Simpan di flutter_secure_storage (Keychain
+      iOS / Keystore Android).
+    # Sintaks `match:` Opengrep: pengecualian "nilai disusun dari hasil
+    # enkripsi di pernyataan sebelumnya" butuh syarat regex di dalam negasi,
+    # yang tidak dapat ditulis dengan pattern-not-inside biasa.
+    match:
+      all:
+        - any:
+            - $PREFS.setString($KEY, $VAL)
+            - $PREFS.write($KEY, $VAL)
+        # Nilai yang dienkripsi sebelum disimpan bukan teks biasa.
+        - not:
+            any:
+              - $PREFS.$SET($KEY, <... $ENC.protect(...) ...>)
+              - $PREFS.$SET($KEY, <... $ENC.encrypt(...) ...>)
+        # Pola XERIA: map berisi SecretProtector.protect(...) (DPAPI) lalu
+        # jsonEncode(map). Pola dalam <... ...> tidak menembus map berisi
+        # `for`, jadi isi penugasannya dicocokkan sebagai teks — dan hanya
+        # bila variabel itu memang dipakai sebagai nilai yang disimpan.
+        - not:
+            all:
+              - $PREFS.$SET($KEY, <... $M ...>)
+              - inside:
+                  all:
+                    - |
+                      $M = $X;
+                      ...
+                  where:
+                    - metavariable: $X
+                      regex: (?s).*\.(protect|encrypt)\(
+      where:
+        - metavariable: $PREFS
+          regex: (?i).*(pref|shared|storage|box).*
+        # metavariable-regex dicocokkan dari awal teks, jadi setiap cabang
+        # diawali .* atau ditambatkan penuh.
+        - metavariable: $KEY
+          regex: (?i)^(.*(access_?token|refresh_?token|auth_?token|id_?token|bearer|jwt|passw(or)?d|sandi|secret|api_?key|session_?id|pin_?code).*|['"]token['"]|(\w+\.)*k?token)$
+    metadata:
+      judul: "Data sensitif disimpan tanpa enkripsi di SharedPreferences (Flutter)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-312: Cleartext Storage of Sensitive Information"
+      owasp: "A04:2021 - Insecure Design"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [flutter, dart, shared-preferences]
+      references:
+        - https://mas.owasp.org/MASTG/tests/android/MASVS-STORAGE/MASTG-TEST-0001/
+        - https://pub.dev/packages/flutter_secure_storage
+
+  - id: dart-sensitive-value-logged
+    languages: [dart]
+    severity: WARNING
+    message: >-
+      Token atau sandi dicetak ke log dengan print/debugPrint. Keduanya tetap
+      aktif di build rilis: di Android isinya masuk logcat dan dapat dibaca
+      lewat adb atau laporan bug. Hapus baris ini, atau bungkus dengan
+      `if (kDebugMode)`.
+    patterns:
+      - pattern-either:
+          - pattern: print("...$VAR...")
+          - pattern: debugPrint("...$VAR...")
+          - pattern: print("...${$VAR}...")
+          - pattern: debugPrint("...${$VAR}...")
+          - pattern: print("..." + $VAR)
+          - pattern: debugPrint("..." + $VAR)
+          - pattern: print($VAR)
+          - pattern: debugPrint($VAR)
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i)^(\w+\.)*\w*(token|passw(or)?d|sandi|secret|api_?key|jwt|bearer)\w*$
+      - pattern-not-inside: |
+          if (kDebugMode) { ... }
+      - pattern-not-inside: |
+          if (kDebugMode) $STMT;
+      - pattern-not-inside: |
+          assert(...);
+    metadata:
+      judul: "Token atau sandi tercetak ke log (Flutter)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-532: Insertion of Sensitive Information into Log File"
+      owasp: "A09:2021 - Security Logging and Monitoring Failures"
+      confidence: MEDIUM
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [flutter, dart]
+      references:
+        - https://mas.owasp.org/MASTG/tests/android/MASVS-STORAGE/MASTG-TEST-0003/
+        - https://api.flutter.dev/flutter/foundation/debugPrint.html
+
+  - id: dart-sqflite-raw-query-interpolation
+    languages: [dart]
+    severity: WARNING
+    message: >-
+      Perintah SQL basis data lokal disusun dengan interpolasi atau
+      penyambungan string. Nilai yang berisi tanda kutip dapat mengubah
+      perintah (membaca atau menghapus baris lain). Pakai placeholder `?`
+      beserta daftar argumen, mis. rawQuery('... WHERE id = ?', [id]).
+    patterns:
+      - pattern-either:
+          - pattern: $DB.$RAW("...${...}...", ...)
+          - pattern: $DB.$RAW("...$X...", ...)
+          - pattern: $DB.$RAW("..." + $X, ...)
+      - metavariable-regex:
+          metavariable: $RAW
+          regex: ^(rawQuery|rawInsert|rawUpdate|rawDelete|execute)$
+      - metavariable-regex:
+          metavariable: $DB
+          regex: (?i).*(db|database|txn|batch|sql).*
+    metadata:
+      judul: "SQL Injection pada basis data lokal sqflite (Flutter)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [flutter, dart, sqflite]
+      references:
+        - https://github.com/tekartik/sqflite/blob/master/sqflite/doc/sql.md
+        - https://mas.owasp.org/MASTG/tests/android/MASVS-CODE/MASTG-TEST-0025/
+
+  - id: dart-insecure-random-for-secret
+    languages: [dart]
+    severity: WARNING
+    message: >-
+      Token, OTP, sandi, salt, nonce, atau kunci dibuat dengan Random() biasa.
+      Random() tidak dirancang untuk keamanan; keluarannya dapat ditebak bila
+      benihnya diketahui. Pakai Random.secure().
+    patterns:
+      - pattern-either:
+          - pattern: $V = <... Random() ...>;
+          - pattern: $V = <... Random($SEED) ...>;
+          - patterns:
+              - pattern: $V = <... $R.$NEXT(...) ...>;
+              - pattern-inside: |
+                  $R = Random();
+                  ...
+      - metavariable-regex:
+          metavariable: $V
+          regex: (?i)^(final\s+|var\s+|String\s+|int\s+)*\w*(token|otp|passw(or)?d|sandi|salt|nonce|secret|api_?key|session|iv|pin|captcha)\w*$
+    metadata:
+      judul: "Nilai rahasia dibuat dengan Random() yang tidak aman (Dart)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator (PRNG)"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: MEDIUM
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [flutter, dart]
+      references:
+        - https://api.dart.dev/stable/dart-math/Random/Random.secure.html
+
+  - id: dart-webview-file-access-from-file-urls
+    severity: WARNING
+    message: >-
+      WebView mengizinkan halaman file:// membaca berkas lain atau memanggil
+      situs mana pun (allowFileAccessFromFileURLs /
+      allowUniversalAccessFromFileURLs). Halaman lokal yang memuat skrip dari
+      luar dapat membaca berkas data aplikasi — termasuk token — dan
+      mengirimkannya keluar. Matikan kedua setelan ini.
+    # Regex, bukan pola Dart: argumen bernama di dalam pemanggilan panjang
+    # dilaporkan pada baris awal pemanggilan, bukan baris setelannya.
+    languages: [regex]
+    paths:
+      include: ["*.dart"]
+    pattern-regex: (?m)^(?![ \t]*//)[^\n]*\ballow(Universal|File)AccessFromFileURLs\s*:\s*true\b
+    metadata:
+      judul: "WebView mengizinkan akses berkas dari URL file:// (Flutter)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: LOW
+      impact: HIGH
+      technology: [flutter, dart, webview]
+      references:
+        - https://mas.owasp.org/MASTG/tests/android/MASVS-PLATFORM/MASTG-TEST-0032/
+        - https://inappwebview.dev/docs/webview/in-app-webview-settings/
+
+  - id: dart-webview-mixed-content-allowed
+    severity: WARNING
+    message: >-
+      WebView mengizinkan halaman HTTPS memuat skrip dan sumber daya lewat
+      http:// biasa. Penyerang di jaringan dapat menyisipkan skrip ke halaman
+      yang terlihat aman. Pakai MIXED_CONTENT_NEVER_ALLOW.
+    languages: [regex]
+    paths:
+      include: ["*.dart"]
+    pattern-regex: (?m)^(?![ \t]*//)[^\n]*\bmixedContentMode\s*:\s*(Android)?MixedContentMode\.MIXED_CONTENT_ALWAYS_ALLOW\b
+    metadata:
+      judul: "WebView mengizinkan konten campuran HTTP dan HTTPS (Flutter)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-319: Cleartext Transmission of Sensitive Information"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [flutter, dart, webview]
+      references:
+        - https://developer.android.com/reference/android/webkit/WebSettings#MIXED_CONTENT_ALWAYS_ALLOW
+
+  - id: dart-downloaded-file-executed-without-verification
+    languages:
+    - dart
+    severity: ERROR
+    message: Berkas yang diunduh mencapai operasi eksekusi tanpa pemeriksaan integritas yang dikenali. Menghitung
+      hash atau memanggil verifier tanpa memakai hasilnya tidak cukup. Validasi byte dari path yang sama
+      terhadap digest/tanda tangan dari sumber tepercaya sebelum eksekusi. Rule mengenali pemeriksaan SHA-256
+      literal pada cabang yang menerima hasil; verifikasi helper, perubahan berkas lewat alias, dan kondisi
+      balapan perlu ditinjau manual.
+    metadata:
+      judul: Berkas unduhan dijalankan tanpa verifikasi integritas (Dart)
+      category: security
+      subcategory:
+      - vuln
+      cwe: 'CWE-494: Download of Code Without Integrity Check'
+      owasp: A08:2021 - Software and Data Integrity Failures
+      confidence: MEDIUM
+      likelihood: LOW
+      impact: HIGH
+      technology:
+      - flutter
+      - dart
+      - dio
+      references:
+      - https://cwe.mitre.org/data/definitions/494.html
+    mode: taint
+    pattern-sources:
+    - patterns:
+      - pattern: await $CLIENT.download($URL, $PATH, ...)
+      - focus-metavariable: $PATH
+      by-side-effect: true
+      exact: true
+    - patterns:
+      - pattern-inside: 'await $CLIENT.download($URL, "$LITERAL_PATH", ...);
+
+          ...
+
+          '
+      - pattern: '"$LITERAL_PATH"'
+      exact: true
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: Process.start($PATH, ...)
+        - pattern: Process.run($PATH, ...)
+        - pattern: Process.start($SHELL, [..., $PATH, ...], ...)
+        - pattern: Process.run($SHELL, [..., $PATH, ...], ...)
+        - pattern: OpenFilex.open($PATH, ...)
+        - pattern: OpenFile.open($PATH, ...)
+        - pattern: $SH.run("...${$PATH}...")
+      - pattern-not: Process.start("explorer.exe", ["/select,", ...], ...)
+      - pattern-not: Process.run("explorer.exe", ["/select,", ...], ...)
+      - focus-metavariable: $PATH
+    pattern-sanitizers:
+    - patterns:
+      - pattern-inside: if (sha256.convert(await File($PATH).readAsBytes()).toString() == "...") { $...BODY;
+          }
+      - focus-metavariable: $...BODY
+      - pattern: $PATH
+      - pattern-not-inside: if (sha256.convert(await File($PATH).readAsBytes()).toString() == "...") { ...
+          $PATH = $NEW; ... }
+      - pattern-not-inside: if (sha256.convert(await File($PATH).readAsBytes()).toString() == "...") { ...
+          await $CLIENT.download($URL, $PATH, ...); ... }
+      - pattern-not-inside: if (sha256.convert(await File($PATH).readAsBytes()).toString() == "...") { ...
+          File($PATH).writeAsBytes(...); ... }
+      - pattern-not-inside: if (sha256.convert(await File($PATH).readAsBytes()).toString() == "...") { ...
+          await File($PATH).writeAsBytes(...); ... }
+      - pattern-not-inside: if (sha256.convert(await File($PATH).readAsBytes()).toString() == "...") { ...
+          File($PATH).writeAsBytesSync(...); ... }
+      - pattern-not-inside: if (sha256.convert(await File($PATH).readAsBytes()).toString() == "...") { ...
+          File($PATH).writeAsString(...); ... }
+      - pattern-not-inside: if (sha256.convert(await File($PATH).readAsBytes()).toString() == "...") { ...
+          await File($PATH).writeAsString(...); ... }
+      exact: true
+    - patterns:
+      - pattern-inside: '$HASH = sha256.convert(await File($PATH).readAsBytes()).toString();
+
+          if ($HASH == "...") { $...BODY; }'
+      - focus-metavariable: $...BODY
+      - pattern: $PATH
+      - pattern-not-inside: '$HASH = sha256.convert(await File($PATH).readAsBytes()).toString();
+
+          if ($HASH == "...") { ... $PATH = $NEW; ... }'
+      - pattern-not-inside: '$HASH = sha256.convert(await File($PATH).readAsBytes()).toString();
+
+          if ($HASH == "...") { ... await $CLIENT.download($URL, $PATH, ...); ... }'
+      - pattern-not-inside: '$HASH = sha256.convert(await File($PATH).readAsBytes()).toString();
+
+          if ($HASH == "...") { ... File($PATH).writeAsBytes(...); ... }'
+      - pattern-not-inside: '$HASH = sha256.convert(await File($PATH).readAsBytes()).toString();
+
+          if ($HASH == "...") { ... await File($PATH).writeAsBytes(...); ... }'
+      - pattern-not-inside: '$HASH = sha256.convert(await File($PATH).readAsBytes()).toString();
+
+          if ($HASH == "...") { ... File($PATH).writeAsBytesSync(...); ... }'
+      - pattern-not-inside: '$HASH = sha256.convert(await File($PATH).readAsBytes()).toString();
+
+          if ($HASH == "...") { ... File($PATH).writeAsString(...); ... }'
+      - pattern-not-inside: '$HASH = sha256.convert(await File($PATH).readAsBytes()).toString();
+
+          if ($HASH == "...") { ... await File($PATH).writeAsString(...); ... }'
+      exact: true

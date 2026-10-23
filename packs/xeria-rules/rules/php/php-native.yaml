@@ -1,0 +1,726 @@
+# PHP tanpa framework: input request yang langsung dipakai sebagai SQL,
+# keluaran HTML, path berkas, atau kode.
+#
+# Aplikasi PHP lama menyusun query dengan sambungan string dan mencetak
+# input apa adanya. Diukur di SIMRS-Khanza (PHP native, mysqli) dan
+# infolahta (PDO).
+rules:
+  - id: php-sqli-from-request
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Query SQL disusun dari input request dengan sambungan string. Penyerang
+      dapat menyisipkan ' OR '1'='1 atau UNION SELECT untuk membaca dan
+      mengubah seluruh isi basis data. Pakai prepared statement dengan
+      parameter (mysqli_prepare/bind_param, atau PDO prepare dengan
+      placeholder :nama), bukan menyambung nilai ke dalam SQL.
+    mode: taint
+    pattern-sources: &php-request-sources
+      - pattern-either:
+          - pattern: $_GET
+          - pattern: $_POST
+          - pattern: $_REQUEST
+          - pattern: $_COOKIE
+          - pattern: $_SERVER['QUERY_STRING']
+          - pattern: $_SERVER['HTTP_REFERER']
+          - pattern: $_SERVER['HTTP_USER_AGENT']
+          # CodeIgniter 3 dan 4.
+          - pattern: $this->input->get(...)
+          - pattern: $this->input->post(...)
+          - pattern: $this->input->get_post(...)
+          - pattern: $this->input->cookie(...)
+          - pattern: $this->request->getVar(...)
+          - pattern: $this->request->getGet(...)
+          - pattern: $this->request->getPost(...)
+          - pattern: $request->getVar(...)
+          - pattern: $request->getGet(...)
+          - pattern: $request->getPost(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: mysqli_query($CONN, $SQL, ...)
+              - pattern: mysql_query($SQL, ...)
+              - pattern: pg_query($CONN, $SQL)
+              - pattern: pg_query($SQL)
+              - pattern: $DB->query($SQL, ...)
+              - pattern: $DB->exec($SQL)
+              - pattern: $DB->prepare($SQL)
+              - pattern: $DB->multi_query($SQL)
+              - pattern: $DB->real_query($SQL)
+              - pattern: $this->db->query($SQL, ...)
+              - pattern: sqlsrv_query($CONN, $SQL, ...)
+              - pattern: oci_parse($CONN, $SQL)
+          - focus-metavariable: $SQL
+    # Escape string tidak aman untuk ekspresi SQL tanpa quote; gunakan parameter binding.
+    pattern-sanitizers:
+      - pattern: pg_escape_literal(...)
+      - pattern: intval(...)
+      - pattern: floatval(...)
+      - pattern: (int) $X
+      - pattern: (float) $X
+      - pattern: $DB->quote(...)
+    metadata:
+      judul: "SQL Injection dari input request (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, mysqli, pdo, codeigniter]
+      references:
+        - https://www.php.net/manual/en/mysqli.quickstart.prepared-statements.php
+        - https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+
+  - id: php-sql-string-from-request
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Teks SQL disusun dari input request. Aplikasi PHP lama sering
+      menjalankannya lewat pembungkus sendiri — getOne($sql), bukaquery($sql)
+      — sehingga bahayanya tidak terlihat dari nama fungsinya, tetapi
+      querynya tetap dapat disisipi. Penyaring daftar-hitam (str_replace atas
+      kutip atau "--") tidak menutup semua jalan; pakai prepared statement
+      dengan parameter.
+    mode: taint
+    pattern-sources: *php-request-sources
+    pattern-sinks:
+      - pattern-either:
+          - patterns:
+              - pattern: sprintf($SQLSTR, ...)
+              - metavariable-regex:
+                  metavariable: $SQLSTR
+                  regex: (?is).*\b(select|delete|insert|update|alter|drop)\b.*
+          - patterns:
+              - pattern: "\"...$EXPR...\""
+              - metavariable-regex:
+                  metavariable: $EXPR
+                  regex: (?is).*\b(select|delete|insert|update|alter|drop)\b.*
+          - patterns:
+              - pattern: "\"$SQLSTR\".$EXPR"
+              - metavariable-regex:
+                  metavariable: $SQLSTR
+                  regex: (?is).*\b(select|delete|insert|update|alter|drop)\b.*
+    # Nama placeholder dari input bukan sanitizer: suffix dapat mengubah sintaks SQL.
+    # Escape string tidak aman untuk ekspresi SQL tanpa quote; gunakan parameter binding.
+    pattern-sanitizers:
+      - pattern: pg_escape_literal(...)
+      - pattern: intval(...)
+      - pattern: floatval(...)
+      - pattern: (int) $X
+      - pattern: (float) $X
+      - pattern: count(...)
+      - pattern: $DB->quote(...)
+    metadata:
+      judul: "Teks SQL disusun dari input request (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, mysqli, pdo, codeigniter]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+        - https://www.php.net/manual/en/pdo.prepared-statements.php
+
+  - id: php-sql-placeholder-name-from-request
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Nama placeholder PDO disusun dari input request — biasanya dari kunci
+      array seperti foreach ($_GET['filter'] as $idx => $nilai). Nilai
+      filternya memang di-bind dengan aman, tetapi kunci array di PHP berasal
+      dari string kueri dan boleh berisi karakter apa pun, sehingga potongan
+      itu ikut masuk ke teks SQL. Susun nama placeholder dari penghitung
+      sendiri (:p0, :p1, …), bukan dari kunci yang dikirim klien.
+    mode: taint
+    pattern-sources: *php-request-sources
+    pattern-sinks:
+      - patterns:
+          - pattern: $PREFIX . $X
+          - metavariable-regex:
+              metavariable: $PREFIX
+              regex: ^['"]\s*:\w*['"]$
+          - focus-metavariable: $X
+    pattern-sanitizers:
+      - pattern: intval(...)
+      - pattern: (int) $X
+      - pattern: preg_replace(...)
+    metadata:
+      judul: "Nama placeholder PDO disusun dari input request"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command"
+      owasp: "A03:2021 - Injection"
+      confidence: LOW
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [php, pdo]
+      references:
+        - https://www.php.net/manual/en/pdo.prepare.php
+        - https://www.php.net/manual/en/language.variables.external.php
+
+  - id: php-xss-echo-request
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Input request mencapai keluaran HTML tanpa encoding yang sesuai konteks. Gunakan htmlspecialchars($nilai,
+      ENT_QUOTES, 'UTF-8') untuk teks atau atribut HTML yang dikutip. strip_tags, JSON encoding, hasil database
+      dan wrapper aplikasi bukan sanitizer HTML universal. Untuk JavaScript atau URL, gunakan encoder serta validasi
+      konteks tersebut.
+    mode: taint
+    pattern-sources: *php-request-sources
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: echo $OUT;
+              - pattern: print $OUT;
+              - pattern: printf($OUT, ...)
+              - pattern: vprintf($OUT, ...)
+              - pattern: print_r($OUT);
+          - pattern-not: echo json_encode(...);
+          - focus-metavariable: $OUT
+          - pattern-not-inside: |
+              header("=~/(?i)^content-type:\s*(?:application\/json|text\/plain)(?:\s*;|$)/");
+              echo $OUT;
+          - pattern-not-inside: |
+              header("=~/(?i)^content-type:\s*(?:application\/json|text\/plain)(?:\s*;|$)/", true);
+              echo $OUT;
+          - pattern-not-inside: |
+              header("=~/(?i)^content-type:\s*(?:application\/json|text\/plain)(?:\s*;|$)/");
+              print $OUT;
+          - pattern-not-inside: |
+              header("=~/(?i)^content-type:\s*(?:application\/json|text\/plain)(?:\s*;|$)/", true);
+              print $OUT;
+          - pattern-not-inside: |
+              header("=~/(?i)^content-type:\s*(?:application\/json|text\/plain)(?:\s*;|$)/");
+              printf($OUT, ...);
+          - pattern-not-inside: |
+              header("=~/(?i)^content-type:\s*(?:application\/json|text\/plain)(?:\s*;|$)/", true);
+              printf($OUT, ...);
+          - pattern-not-inside: |
+              header("=~/(?i)^content-type:\s*(?:application\/json|text\/plain)(?:\s*;|$)/");
+              vprintf($OUT, ...);
+          - pattern-not-inside: |
+              header("=~/(?i)^content-type:\s*(?:application\/json|text\/plain)(?:\s*;|$)/", true);
+              vprintf($OUT, ...);
+          - pattern-not-inside: |
+              header("=~/(?i)^content-type:\s*(?:application\/json|text\/plain)(?:\s*;|$)/");
+              print_r($OUT);
+          - pattern-not-inside: |
+              header("=~/(?i)^content-type:\s*(?:application\/json|text\/plain)(?:\s*;|$)/", true);
+              print_r($OUT);
+    # HTML encoding hanya untuk teks/atribut berkutip; atribut tanpa kutip memiliki rule terpisah.
+    pattern-sanitizers:
+      - pattern: htmlspecialchars($X, <... ENT_QUOTES ...>, ...)
+      - pattern: htmlentities($X, <... ENT_QUOTES ...>, ...)
+      - pattern: esc($X)
+      - pattern: esc($X, "html")
+      - pattern: esc($X, "attr")
+      - pattern: html_escape(...)
+      - pattern: esc_attr(...)
+      - pattern: esc_html(...)
+      - pattern: esc_textarea(...)
+      - pattern: absint(...)
+      - pattern: intval(...)
+      - pattern: (int) $X
+      - pattern: count(...)
+    metadata:
+      judul: "Reflected XSS dari input request (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: MEDIUM
+      technology: [php, codeigniter]
+      references:
+        - https://www.php.net/manual/en/function.htmlspecialchars.php
+        - https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+
+  - id: php-html-encoding-in-unquoted-attribute
+    languages:
+      - php
+    severity: WARNING
+    message: >-
+      Input request yang sudah di-encode untuk HTML disisipkan ke atribut tanpa tanda kutip. htmlspecialchars(...,
+      ENT_QUOTES) dan esc_attr masih membiarkan spasi serta tanda sama dengan; penyerang dapat menyisipkan atribut
+      baru saat string dirender sebagai HTML. Bungkus nilai atribut dengan tanda kutip dan encode sesuai konteks.
+      Verifikasi string ini mencapai output HTML; encoding HTML juga tidak memvalidasi URL atau JavaScript.
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: $_GET
+          - pattern: $_POST
+          - pattern: $_REQUEST
+          - pattern: $_COOKIE
+          - pattern: $_SERVER['QUERY_STRING']
+          - pattern: $_SERVER['HTTP_REFERER']
+          - pattern: $_SERVER['HTTP_USER_AGENT']
+          # CodeIgniter 3 dan 4.
+          - pattern: $this->input->get(...)
+          - pattern: $this->input->post(...)
+          - pattern: $this->input->get_post(...)
+          - pattern: $this->input->cookie(...)
+          - pattern: $this->request->getVar(...)
+          - pattern: $this->request->getGet(...)
+          - pattern: $this->request->getPost(...)
+          - pattern: $request->getVar(...)
+          - pattern: $request->getGet(...)
+          - pattern: $request->getPost(...)
+        label: REQUEST
+      - pattern-either:
+          - pattern: htmlspecialchars($X, <... ENT_QUOTES ...>, ...)
+          - pattern: htmlentities($X, <... ENT_QUOTES ...>, ...)
+          - pattern: esc($X)
+          - pattern: esc($X, "html")
+          - pattern: esc($X, "attr")
+          - pattern: html_escape(...)
+          - pattern: esc_attr(...)
+          - pattern: esc_html(...)
+          - pattern: esc_textarea(...)
+        label: HTML_ENCODED
+        requires: REQUEST
+        exact: true
+    pattern-sinks:
+      - patterns:
+          - pattern: $PREFIX . $VALUE
+          - metavariable-regex:
+              metavariable: $PREFIX
+              regex: (?is)^(['"]).*<[^>]+\s[^\s"'<>/=]+\s*=\s*\1$
+          - focus-metavariable: $VALUE
+        requires: HTML_ENCODED
+    pattern-sanitizers:
+      - pattern: absint(...)
+      - pattern: intval(...)
+      - pattern: (int) $X
+      - pattern: count(...)
+    metadata:
+      judul: Encoding HTML dipakai pada atribut tanpa tanda kutip (PHP)
+      category: security
+      subcategory:
+        - audit
+      cwe: 'CWE-79: Improper Neutralization of Input During Web Page Generation'
+      owasp: A03:2021 - Injection
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology:
+        - php
+        - codeigniter
+        - wordpress
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+        - https://www.php.net/manual/en/function.htmlspecialchars.php
+  - id: php-json-response-reflects-request
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Input request dipantulkan melalui json_encode tanpa konteks respons non-HTML yang dikenali tepat sebelum output.
+      Jika respons dikirim sebagai text/html, karakter < dan > dapat membuat markup penyerang aktif. Pastikan Content-Type
+      final application/json dan gunakan JSON_HEX_TAG untuk output yang bisa masuk dokumen HTML. Header dari middleware
+      atau konfigurasi server perlu diverifikasi saat triage; temuan ini tidak membuktikan MIME respons aktual.
+    mode: taint
+    pattern-sources: *php-request-sources
+    pattern-sinks:
+      - patterns:
+          - pattern: echo json_encode($OUT, ...);
+          - focus-metavariable: $OUT
+          - pattern-not-inside: |
+              header("=~/(?i)^content-type:\s*(?:application\/json|text\/plain)(?:\s*;|$)/");
+              echo json_encode($OUT, ...);
+          - pattern-not-inside: |
+              header("=~/(?i)^content-type:\s*(?:application\/json|text\/plain)(?:\s*;|$)/", true);
+              echo json_encode($OUT, ...);
+          - pattern-not-inside: |
+              $this->output->set_content_type("application/json");
+              echo json_encode($OUT, ...);
+          - pattern-not-inside: echo json_encode($X, <... JSON_HEX_TAG ...>);
+    pattern-sanitizers:
+      - pattern: htmlspecialchars($X, <... ENT_QUOTES ...>, ...)
+      - pattern: htmlentities($X, <... ENT_QUOTES ...>, ...)
+      - pattern: html_escape(...)
+      - pattern: esc_attr(...)
+      - pattern: esc_html(...)
+      - pattern: absint(...)
+      - pattern: intval(...)
+      - pattern: (int) $X
+      - pattern: count(...)
+    metadata:
+      judul: "Review konteks Content-Type untuk respons JSON (PHP)"
+      category: security
+      subcategory:
+        - audit
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [php, codeigniter]
+      references:
+        - https://www.php.net/manual/en/json.constants.php#constant.json-hex-tag
+        - https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+
+  - id: php-file-inclusion-from-request
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Berkas include/require ditentukan input request. basename() membatasi komponen path tetapi tetap membiarkan
+      pengguna memilih file lokal; casting angka juga bukan allowlist file. Pilih file dari pemetaan konstan yang
+      diizinkan server dan periksa otorisasi, bukan membangun nama file dari request.
+    mode: taint
+    pattern-sources: *php-request-sources
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: include $PATH;
+              - pattern: include($PATH);
+              - pattern: include_once $PATH;
+              - pattern: include_once($PATH);
+              - pattern: require $PATH;
+              - pattern: require($PATH);
+              - pattern: require_once $PATH;
+              - pattern: require_once($PATH);
+          - focus-metavariable: $PATH
+    metadata:
+      judul: "Inklusi berkas dari input request (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-98: Improper Control of Filename for Include/Require Statement in PHP Program"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, codeigniter]
+      references:
+        - https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/11.1-Testing_for_Local_File_Inclusion
+
+  - id: php-path-traversal-from-request
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Path berkas yang dibaca atau ditulis berasal dari input request. Dengan
+      ../ penyerang dapat membaca berkas konfigurasi berisi kredensial, atau
+      menimpa berkas lain. Ambil nama berkasnya saja dengan basename(), lalu
+      pastikan hasil realpath() masih berada di dalam folder yang diizinkan.
+    mode: taint
+    pattern-sources: *php-request-sources
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: file_get_contents($PATH, ...)
+              - pattern: file_put_contents($PATH, ...)
+              - pattern: fopen($PATH, ...)
+              - pattern: readfile($PATH, ...)
+              - pattern: file($PATH, ...)
+              - pattern: copy($PATH, ...)
+              - pattern: rename($PATH, ...)
+              - pattern: scandir($PATH, ...)
+              - pattern: opendir($PATH, ...)
+          - focus-metavariable: $PATH
+    pattern-sanitizers:
+      - pattern: basename(...)
+      - pattern: intval(...)
+      - pattern: (int) $X
+    metadata:
+      judul: "Path traversal dari input request (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+      owasp: "A01:2021 - Broken Access Control"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [php, codeigniter]
+      references:
+        - https://owasp.org/www-community/attacks/Path_Traversal
+
+  - id: php-unserialize-from-request
+    languages: [php]
+    severity: ERROR
+    message: >-
+      unserialize() dijalankan atas nilai dari request. Penyerang dapat
+      menyusun objek buatan sendiri yang memicu method __wakeup/__destruct
+      kelas mana pun yang ada di aplikasi (PHP object injection), dan pada
+      banyak aplikasi berujung eksekusi perintah. Pakai json_decode() untuk
+      data dari luar.
+    mode: taint
+    pattern-sources: *php-request-sources
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: unserialize($DATA, ...)
+              - pattern: yaml_parse($DATA, ...)
+          - focus-metavariable: $DATA
+    metadata:
+      judul: "unserialize atas input request (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [php, codeigniter]
+      references:
+        - https://www.php.net/manual/en/function.unserialize.php
+        - https://owasp.org/www-community/vulnerabilities/PHP_Object_Injection
+
+  - id: php-dynamic-code-from-request
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Input request dijalankan sebagai kode PHP. Penyerang dapat menjalankan
+      perintah apa pun di server. Tidak ada cara aman memakai eval/assert atas
+      nilai dari luar — ganti dengan logika biasa atau daftar putih fungsi.
+    mode: taint
+    pattern-sources: *php-request-sources
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: eval($CODE);
+              - pattern: assert($CODE);
+              - pattern: create_function($ARG, $CODE)
+              - pattern: call_user_func($CODE, ...)
+              - pattern: call_user_func_array($CODE, ...)
+          - focus-metavariable: $CODE
+    metadata:
+      judul: "Input request dijalankan sebagai kode PHP"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [php, codeigniter]
+      references:
+        - https://www.php.net/manual/en/function.eval.php
+
+  - id: php-extract-from-request
+    languages: [php]
+    severity: WARNING
+    message: >-
+      extract() membuat variabel dari seluruh isi request. Penyerang dapat
+      menimpa variabel apa pun yang belum diisi di atasnya — misalnya
+      $is_admin atau $config — dan mengubah jalannya kode. Baca nilai yang
+      diperlukan satu per satu dari $_POST/$_GET.
+    pattern-either:
+      - pattern: extract($_GET, ...)
+      - pattern: extract($_POST, ...)
+      - pattern: extract($_REQUEST, ...)
+      - pattern: extract($_COOKIE, ...)
+    metadata:
+      judul: "extract() atas seluruh input request (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-621: Variable Extraction Error"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [php, codeigniter]
+      references:
+        - https://www.php.net/manual/en/function.extract.php
+
+  - id: php-upload-destination-from-client-filename
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Tujuan simpan berkas unggahan disusun dari nama berkas kiriman klien
+      tanpa basename(). Nama itu tidak dibersihkan PHP: klien dapat
+      mengirimkan "../../berkas.jpg" sehingga berkas tertulis di luar folder
+      unggahan dan menimpa berkas lain. Nama ganda seperti "laporan.php.jpg"
+      juga lolos pemeriksaan ekstensi yang hanya melihat akhiran. Simpan
+      dengan nama buatan server (uniqid/hash) di folder yang tidak
+      mengeksekusi PHP, dan ambil ekstensinya dari daftar putih.
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: $_FILES[$KEY]['name']
+          - pattern: $_FILES[$KEY]["name"]
+    pattern-sinks:
+      - patterns:
+          - pattern: move_uploaded_file($TMP, $DEST)
+          - focus-metavariable: $DEST
+    # basename() menutup penulisan di luar folder; nama buatan server
+    # membuat nama kiriman klien tidak lagi dipakai sama sekali.
+    pattern-sanitizers:
+      - pattern: basename(...)
+      - pattern: uniqid(...)
+      - pattern: md5(...)
+      - pattern: sha1(...)
+      - pattern: bin2hex(...)
+      - pattern: random_bytes(...)
+    metadata:
+      judul: "Tujuan simpan unggahan dari nama berkas klien (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+      owasp: "A01:2021 - Broken Access Control"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [php, codeigniter]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
+        - https://www.php.net/manual/en/features.file-upload.post-method.php
+
+  - id: php-hardcoded-db-credentials
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Kata sandi literal ditemukan dalam assignment atau konfigurasi koneksi. Nilai lemah seperti password/changeme
+      tetap merupakan kredensial bila dipakai aplikasi. Gunakan secret dari lingkungan atau konfigurasi terlindungi;
+      rotasi bila nilainya pernah terpapar.
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern-either:
+                  - pattern: $VAR = "$NILAI";
+                  - pattern: $VAR = '$NILAI';
+              - metavariable-regex:
+                  metavariable: $VAR
+                  regex: (?i)^\$(db_?)?(pass|passwd|password|pwd|sandi|kata_sandi)\w*$
+          - pattern: mysqli_connect($H, $U, "$NILAI", ...)
+          - pattern: new mysqli($H, $U, "$NILAI", ...)
+          - pattern: new PDO($DSN, $U, "$NILAI", ...)
+          - pattern: |
+              [..., "password" => "$NILAI", ...]
+          - pattern: |
+              [..., 'password' => '$NILAI', ...]
+      - metavariable-regex:
+          metavariable: $NILAI
+          regex: ^(?!(\*+|<[^>]*>|\$\{[^}]*\}|%[^%]*%)$).{1,}$
+    metadata:
+      judul: "Kata sandi basis data tertulis di kode (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: MEDIUM
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, mysqli, pdo, codeigniter]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html
+
+  # Bentuk konstanta, dipisah dari aturan di atas karena metavariable-regex
+  # tidak boleh dipakai lintas cabang pattern-either yang tidak mengikat
+  # metavariabelnya. Ditemukan lewat korem 012: `wp-config.php` memuat
+  # DB_PASSWORD asli, tetapi tidak satu mesin pun melaporkannya — regex
+  # generic-api-key Gitleaks menolak nilai bersimbol (`User@mabesAD000`),
+  # dan aturan kredensial DB hanya mengenal `$var = "…"`.
+  - id: php-hardcoded-credential-constant
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Kata sandi literal ditemukan dalam konstanta konfigurasi. Password/changeme bukan nilai aman ketika dipakai
+      sebagai default aplikasi. Pindahkan ke secret dari lingkungan atau konfigurasi terlindungi dan rotasi bila
+      pernah terpapar.
+    patterns:
+      - pattern-either:
+          - pattern: define($NAMA, "$NILAI")
+          - pattern: define($NAMA, '$NILAI')
+      # Nama konstanta yang menyatakan kata sandi, bukan setelan tentang
+      # kata sandi (PASSWORD_MIN_LENGTH, PASSWORD_HASH_ALGO, label formulir).
+      - metavariable-regex:
+          metavariable: $NAMA
+          regex: 
+            (?i)^['"](?!.*(_(length|algo|type|field|label|url|regex|hint|placeholder)))\w*(pass(word|wd)?|pwd|sandi)\w*['"]$
+      - metavariable-regex:
+          metavariable: $NILAI
+          # `password_here` adalah isi wp-config-sample.php bawaan WordPress —
+          # berkas contoh yang selalu ikut, bukan kredensial.
+          regex: 
+            ^(?!(bcrypt|argon2i?d?|md5|sha1|sha256|xxx+|\*+|\w*_here|your_\w+|put[_-]?your[_-]?\w+)$).{1,}$
+    metadata:
+      judul: "Kata sandi tertulis sebagai konstanta (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, wordpress]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html
+
+  - id: php-hardcoded-crypto-key
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Kunci enkripsi tertulis langsung di kode. Bila kodenya dibagikan atau
+      berasal dari aplikasi sumber terbuka, kuncinya diketahui umum, sehingga
+      nilai apa pun yang "diamankan" dengannya — parameter URL terenkripsi,
+      token, cookie — dapat dibuat sendiri oleh penyerang. Simpan kunci di
+      variabel lingkungan atau berkas konfigurasi di luar repositori, dan
+      ganti kunci lama karena harus dianggap sudah bocor.
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              function $F(...) { ... <... openssl_encrypt(...) ...>; ... }
+          - pattern-inside: |
+              function $F(...) { ... <... openssl_decrypt(...) ...>; ... }
+          - pattern-inside: |
+              function $F(...) { ... <... mcrypt_encrypt(...) ...>; ... }
+          - pattern-inside: |
+              function $F(...) { ... <... sodium_crypto_secretbox(...) ...>; ... }
+      - pattern-either:
+          - pattern: $VAR = "$NILAI";
+          - pattern: $VAR = '$NILAI';
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i)^\$(secret_?key|encryption_?key|crypto_?key|cipher_?key|secret_?iv|enc_?key|kunci\w*)$
+      - metavariable-regex:
+          metavariable: $NILAI
+          regex: 
+            ^(?!(secret|rahasia|changeme|change_me|your_key|isi_kunci|xxx+|\*+|<[^>]*>|\$\{[^}]*\})$).{4,}$
+    metadata:
+      judul: "Kunci enkripsi tertulis di kode (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-321: Use of Hard-coded Cryptographic Key"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [php, codeigniter]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html
+
+  - id: php-weak-password-hash
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Kata sandi di-hash dengan MD5/SHA-1. Keduanya cepat dihitung, sehingga
+      basis data yang bocor dapat dipecahkan dengan daftar kata sandi umum
+      dalam hitungan menit. Pakai password_hash($sandi, PASSWORD_DEFAULT) dan
+      password_verify() untuk memeriksanya.
+    patterns:
+      - pattern-either:
+          - pattern: md5($PASS)
+          - pattern: sha1($PASS)
+          - pattern: hash("md5", $PASS)
+          - pattern: hash("sha1", $PASS)
+      - metavariable-regex:
+          metavariable: $PASS
+          regex: (?i).*(pass|pwd|sandi|passwd|password).*
+    metadata:
+      judul: "Kata sandi di-hash dengan MD5 atau SHA-1 (PHP)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-916: Use of Password Hash With Insufficient Computational Effort"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [php, codeigniter]
+      references:
+        - https://www.php.net/manual/en/function.password-hash.php
+        - https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html

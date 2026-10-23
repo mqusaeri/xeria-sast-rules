@@ -1,0 +1,48 @@
+rules:
+- id: math-random-used
+  metadata:
+    cwe:
+    - 'CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator (PRNG)'
+    owasp:
+    - A02:2021 - Cryptographic Failures
+    - A04:2025 - Cryptographic Failures
+    references:
+    - https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html#secure-random-number-generation
+    category: security
+    technology:
+    - go
+    confidence: LOW
+    subcategory:
+    - audit
+    likelihood: MEDIUM
+    impact: MEDIUM
+  message: math/rand is not suitable for security-sensitive tokens or secrets. For such values use crypto/rand
+    with its proper API and error handling; changing the import alone is not a safe migration. Randomness for
+    simulation, sampling or non-security behavior can be intentional.
+  languages:
+  - go
+  severity: WARNING
+  patterns:
+  - pattern-either:
+    - pattern: 'import $RAND "$MATH"
+
+        '
+    - pattern: 'import "$MATH"
+
+        '
+  - metavariable-regex:
+      metavariable: $MATH
+      regex: ^(math/rand(\/v[0-9]+)*)$
+  - pattern-either:
+    - pattern-inside: '...
+
+        rand.$FUNC(...)
+
+        '
+    - pattern-inside: '...
+
+        $RAND.$FUNC(...)
+
+        '
+  - focus-metavariable:
+    - $MATH

@@ -1,0 +1,1102 @@
+{
+  "schema": 1,
+  "baselineCommit": "246a7c825ad37c58b99dda74cb60a500887d3318",
+  "releaseDate": "2026-10-23",
+  "summary": {
+    "baselineRules": 1954,
+    "currentRules": 1963,
+    "modifiedRules": 74,
+    "addedRules": 9,
+    "removedRules": 0
+  },
+  "configurationChanges": [
+    "31 historical global suppressions moved to review documentation; active suppress list is empty.",
+    "Gitleaks global boolean/null allowlist anchoring fixed; default path exclusions retained.",
+    "Optional deep secret profile has explicit scope; archive depth remains a runtime option."
+  ],
+  "packages": [
+    {
+      "id": "semgrep-rules",
+      "version": "2026.10.23.1",
+      "baselineArchive": "semgrep-rules-2026.07.30.1.zip",
+      "baselineArchiveSha256": "a58c43f4a487c9fb85bae1bcd3629ed7552ab6c54bda80a94520cd81f341ee82",
+      "baselineRules": 1462,
+      "currentRules": 1462,
+      "modifiedRules": [
+        {
+          "file": "rules/ai/ai-best-practices/claude-settings-bypass-permissions/claude-settings-bypass-permissions.yaml",
+          "id": "claude-settings-bypass-permissions-generic",
+          "fields": [
+            "languages",
+            "message",
+            "metadata",
+            "paths",
+            "pattern-either",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/ai/ai-best-practices/llm-output-to-exec/llm-output-to-exec-javascript.yaml",
+          "id": "llm-output-to-exec-javascript",
+          "fields": [
+            "pattern-sinks",
+            "pattern-sources"
+          ]
+        },
+        {
+          "file": "rules/ai/ai-best-practices/llm-output-to-exec/llm-output-to-exec-python.yaml",
+          "id": "llm-output-to-exec-python",
+          "fields": [
+            "pattern-sinks",
+            "pattern-sources"
+          ]
+        },
+        {
+          "file": "rules/ai/ai-best-practices/mcp-ssrf/mcp-ssrf.yaml",
+          "id": "mcp-ssrf-python",
+          "fields": [
+            "message",
+            "pattern-sanitizers",
+            "pattern-sinks",
+            "pattern-sources"
+          ]
+        },
+        {
+          "file": "rules/ai/ai-best-practices/mcp-tool-poisoning/mcp-tool-poisoning.yaml",
+          "id": "mcp-tool-poisoning-generic",
+          "fields": [
+            "languages",
+            "message",
+            "metadata",
+            "pattern-either",
+            "patterns",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/ai/ai-best-practices/mcp-typosquatted-tool-name/mcp-typosquatted-tool-name.yaml",
+          "id": "mcp-typosquatted-tool-name-python",
+          "fields": [
+            "message",
+            "pattern-either"
+          ]
+        },
+        {
+          "file": "rules/ai/ai-best-practices/mcp-unsanitized-return/mcp-unsanitized-return.yaml",
+          "id": "mcp-unsanitized-return-python",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-sanitizers",
+            "pattern-sinks",
+            "pattern-sources",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/ai/ai-best-practices/mistral-user-input-in-system-prompt/mistral-user-input-in-system-prompt-js.yaml",
+          "id": "mistral-user-input-in-system-prompt-js",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-sinks",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/ai/ai-best-practices/mistral-user-input-in-system-prompt/mistral-user-input-in-system-prompt-python.yaml",
+          "id": "mistral-user-input-in-system-prompt-python",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-sinks",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/ai/ai-best-practices/openai-missing-max-tokens/openai-missing-max-tokens-javascript.yaml",
+          "id": "openai-missing-max-tokens-javascript",
+          "fields": [
+            "message",
+            "metadata",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/ai/ai-best-practices/openai-missing-max-tokens/openai-missing-max-tokens-python.yaml",
+          "id": "openai-missing-max-tokens-python",
+          "fields": [
+            "message",
+            "metadata",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/ai/ai-best-practices/openai-missing-moderation/openai-missing-moderation.yaml",
+          "id": "openai-missing-moderation",
+          "fields": [
+            "message",
+            "metadata",
+            "patterns",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/ai/ai-best-practices/openai-user-input-in-system-prompt/openai-user-input-in-system-prompt-js.yaml",
+          "id": "openai-user-input-in-system-prompt-js",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-sinks",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/ai/ai-best-practices/openai-user-input-in-system-prompt/openai-user-input-in-system-prompt-python.yaml",
+          "id": "openai-user-input-in-system-prompt-python",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-sinks",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/go/lang/security/audit/crypto/math_random.yaml",
+          "id": "math-random-used",
+          "fields": [
+            "fix",
+            "message",
+            "metadata"
+          ]
+        },
+        {
+          "file": "rules/go/lang/security/injection/tainted-url-host.yaml",
+          "id": "tainted-url-host",
+          "fields": [
+            "pattern-sources"
+          ]
+        },
+        {
+          "file": "rules/go/lang/security/zip.yaml",
+          "id": "path-traversal-inside-zip-extraction",
+          "fields": [
+            "message",
+            "pattern",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/javascript/jsonwebtoken/security/audit/jwt-decode-without-verify.yaml",
+          "id": "jwt-decode-without-verify",
+          "fields": [
+            "message",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/package_managers/npm/npm-missing-minimum-release-age.yaml",
+          "id": "npm-missing-minimum-release-age",
+          "fields": [
+            "metadata",
+            "pattern-either"
+          ]
+        },
+        {
+          "file": "rules/package_managers/uv/uv-missing-dependency-cooldown.yaml",
+          "id": "uv-missing-dependency-cooldown",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-either"
+          ]
+        },
+        {
+          "file": "rules/python/cryptography/security/insecure-cipher-mode-ecb.yaml",
+          "id": "insecure-cipher-mode-ecb",
+          "fields": [
+            "fix",
+            "message",
+            "pattern"
+          ]
+        },
+        {
+          "file": "rules/python/django/security/audit/unvalidated-password.yaml",
+          "id": "unvalidated-password",
+          "fields": [
+            "fix",
+            "message",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/terraform/aws/security/unrestricted-github-oidc-policy.yaml",
+          "id": "unrestricted-github-oidc-policy",
+          "fields": [
+            "match",
+            "message",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/yaml/github-actions/security/run-shell-injection.yaml",
+          "id": "run-shell-injection",
+          "fields": [
+            "patterns"
+          ]
+        }
+      ],
+      "addedRules": [],
+      "removedRules": [],
+      "changedFiles": [
+        {
+          "path": "rules/ai/ai-best-practices/claude-settings-bypass-permissions/claude-settings-bypass-permissions.yaml",
+          "before_sha256": "7313785b8320983de078454eeb91a2c7182374d48710c10534677c3a95634c3b",
+          "after_sha256": "2a4febb994ced6a48822936ff6e696bf7143fa6795351ec9157c8d15132dc5be"
+        },
+        {
+          "path": "rules/ai/ai-best-practices/llm-output-to-exec/llm-output-to-exec-javascript.yaml",
+          "before_sha256": "4d0335ef2e00760a9f5249e029e47ba3dc888102450ae605da007714d10c995f",
+          "after_sha256": "9d44d07c0d4881765dd14a4744bedbb8b5319b78334e2f83bf824d6db572e776"
+        },
+        {
+          "path": "rules/ai/ai-best-practices/llm-output-to-exec/llm-output-to-exec-python.yaml",
+          "before_sha256": "9fc64cf751a98dfee265ae5afc7dac05c85633d5cf0d6a113845d063a209a6b4",
+          "after_sha256": "dc7a5e2e7e1afd1d678a860ffccbcbc5cb3998179215a48459f21ef070b1f53b"
+        },
+        {
+          "path": "rules/ai/ai-best-practices/mcp-ssrf/mcp-ssrf.yaml",
+          "before_sha256": "8df2d0b58df9c2ec1875c0f0cfb6222bbe795a5b0978900974c4fa2e47551654",
+          "after_sha256": "91c7e092b47c708e52ef06b0072c8fb544f25dd69b8a71c1dd736103f6f6d499"
+        },
+        {
+          "path": "rules/ai/ai-best-practices/mcp-tool-poisoning/mcp-tool-poisoning.yaml",
+          "before_sha256": "3e2d23a4a1375bcfb7eabf82586b720f3078c8751f22fad11863c57f34a63e5a",
+          "after_sha256": "16a8d5fc064c5c89201e312e5c12076ac4a9f8d7ca5fd69ca2b968ca7055020b"
+        },
+        {
+          "path": "rules/ai/ai-best-practices/mcp-typosquatted-tool-name/mcp-typosquatted-tool-name.yaml",
+          "before_sha256": "f21237a7dd90b06eb124a856ce51c8f98ee9758f5f429c863201a7e6f35fc3dd",
+          "after_sha256": "d6b826cf76c1c48f452c0b1da77d37785ee4b16675187d211417af03a8adabee"
+        },
+        {
+          "path": "rules/ai/ai-best-practices/mcp-unsanitized-return/mcp-unsanitized-return.yaml",
+          "before_sha256": "79f8524814cf4c7828d0507a4160325b8b937e61386edd19803e2fcf51b43878",
+          "after_sha256": "24656d9b9191265a9056eedf3cd64f216bc1c862583ebfce34ae3dc435bc0642"
+        },
+        {
+          "path": "rules/ai/ai-best-practices/mistral-user-input-in-system-prompt/mistral-user-input-in-system-prompt-js.yaml",
+          "before_sha256": "88a0e8c968d05257fb419198c45333721fb4440e68bcd9a4e45e3e4f463c224b",
+          "after_sha256": "da58d827bf280562b2735908106a68125cfc964ee7d907ca541eed1ea08fd7ea"
+        },
+        {
+          "path": "rules/ai/ai-best-practices/mistral-user-input-in-system-prompt/mistral-user-input-in-system-prompt-python.yaml",
+          "before_sha256": "47fbe889d1046c44acc0ee59afef131f6047c9f03a5f0f7e5c9d6e7a0e5c01cb",
+          "after_sha256": "f641765239c32a79e017fd8fdc8aebfcd29c55abedc1b11961c1602ec773fd88"
+        },
+        {
+          "path": "rules/ai/ai-best-practices/openai-missing-max-tokens/openai-missing-max-tokens-javascript.yaml",
+          "before_sha256": "14c82d29d781438553fd44bd12abe613e03856b147caff250ec8e8d65223e890",
+          "after_sha256": "8613a386af8e783bebd8eeac612ce47c07c66c237ece2f1babf25d246c1094a8"
+        },
+        {
+          "path": "rules/ai/ai-best-practices/openai-missing-max-tokens/openai-missing-max-tokens-python.yaml",
+          "before_sha256": "3dedc978e8e9027043561fbcf3a5a7b8991b038d5f1b8f36295ffd7552a87cbe",
+          "after_sha256": "e069c34dc7de98c962f28d23b5671c00af1371c8ba82ff24d695d29ee32ab4dc"
+        },
+        {
+          "path": "rules/ai/ai-best-practices/openai-missing-moderation/openai-missing-moderation.yaml",
+          "before_sha256": "70883cd743d2618b9375e117a9cd3e5a558c745ff8179f90ba5d6e41fabc361b",
+          "after_sha256": "59bbee4f117e643984e73afded6611aec64ef6ae8abc9ccfb67fc0dcef39fd47"
+        },
+        {
+          "path": "rules/ai/ai-best-practices/openai-user-input-in-system-prompt/openai-user-input-in-system-prompt-js.yaml",
+          "before_sha256": "caa73392f188f70ebf1642602edf277d6f13439c615dadf5e3d137828a6cb455",
+          "after_sha256": "4fb6a6660432ad929c61f2f8559d42a768c6c062f4911706c9070df3760cae2e"
+        },
+        {
+          "path": "rules/ai/ai-best-practices/openai-user-input-in-system-prompt/openai-user-input-in-system-prompt-python.yaml",
+          "before_sha256": "688d516891126d43bb07b95a27e2084d46ad413979ef17b1206a2c8d7328f253",
+          "after_sha256": "e243bd08c132533c44e30a92e9f9459e90333350a7151263d91fcf65e9e382c2"
+        },
+        {
+          "path": "rules/go/lang/security/audit/crypto/math_random.yaml",
+          "before_sha256": "897361e03410697e14c410bec02f3947a9e8dc3b8cac73aacb260e0a3e0249c7",
+          "after_sha256": "59a96305ed158cb629b473dace49efd34f5914139156481a8816f837893c0daf"
+        },
+        {
+          "path": "rules/go/lang/security/injection/tainted-url-host.yaml",
+          "before_sha256": "481f38df51f4ad8f2438aa47f502572cf933cc54ce28a34ae56f539c27a80774",
+          "after_sha256": "ef84087625a97ff1f637b1a8c52eb2cce9b461120a9766b2a8c43ef1c97901d6"
+        },
+        {
+          "path": "rules/go/lang/security/zip.yaml",
+          "before_sha256": "f8778412982aafc14e97599a77c341e6931c6b995e604b0fa19db45f95045f46",
+          "after_sha256": "f70f59d69e93d6cbdd1b9a82023597d6514b82bf709cf903439c9f160d0ca38a"
+        },
+        {
+          "path": "rules/javascript/jsonwebtoken/security/audit/jwt-decode-without-verify.yaml",
+          "before_sha256": "7b02fe998a434f6a7df5976848c1ea5d3ca3eae8cb299c2631c69d6cb239ea32",
+          "after_sha256": "b7cd120d077f1d611eca2c7d7695a820167b60f26dbce393469bf3b0b05b334d"
+        },
+        {
+          "path": "rules/package_managers/npm/npm-missing-minimum-release-age.yaml",
+          "before_sha256": "8f77a2c37b1bd94633ee7b473b0b1fe20441da36881248dab635e0146d79b0ac",
+          "after_sha256": "06782fd78942b21dd5923e7ec851c748625bc64f0669bef152734b21e9f1e5c6"
+        },
+        {
+          "path": "rules/package_managers/uv/uv-missing-dependency-cooldown.yaml",
+          "before_sha256": "20906e0d6c60826b76b9b3d4e4b777a3c931cc5a4af1bfe9905c9812dd2a712b",
+          "after_sha256": "48515c5ecab26234965c1390bbe0268417d9b728594e3e36ea7b2c5056685cea"
+        },
+        {
+          "path": "rules/python/cryptography/security/insecure-cipher-mode-ecb.yaml",
+          "before_sha256": "323e88e423b48dc5ebf95d8c237201c2898122d20151bacc9a11028388f859cd",
+          "after_sha256": "df17d0986db5743253dd6fb8118aedf4f4dc8b08ace2b72edd6257177b4a1dbc"
+        },
+        {
+          "path": "rules/python/django/security/audit/unvalidated-password.yaml",
+          "before_sha256": "3d9895493c64bba96cdd87fd232c8a81267bb4dba2e1b6f899b3a0ca2b6cc9cc",
+          "after_sha256": "2f9ce7fceb0fb7bff70d86ed1f434181f5b93cc069100019131382a0983a672f"
+        },
+        {
+          "path": "rules/terraform/aws/security/unrestricted-github-oidc-policy.yaml",
+          "before_sha256": "da73743aa62fece057bc4d3d360274b19d1d0b0cccac376aa51b430e5227590f",
+          "after_sha256": "c7f7e3643afe0c42de25031d1e6e3950ed6ad0124f1596df6b9b5dee0f8bec10"
+        },
+        {
+          "path": "rules/yaml/github-actions/security/run-shell-injection.yaml",
+          "before_sha256": "156d9ce4dad539528d9e54a2acc88fa1d7e68b70bd6f3e8db37c826fc3d4941c",
+          "after_sha256": "d3c32c1559ab4fec3252fe742d7d7f0f32368cce4c4f226700b7e8117d475fb6"
+        }
+      ]
+    },
+    {
+      "id": "mobsfscan-rules",
+      "version": "1.0.1",
+      "baselineArchive": "mobsfscan-rules-1.0.0.zip",
+      "baselineArchiveSha256": "c93a1511b9860397b877a1b353c45f1b4102bfe71d9fae7257fa3fb21bb23d87",
+      "baselineRules": 103,
+      "currentRules": 103,
+      "modifiedRules": [
+        {
+          "file": "rules/mobsfscan/rules/semgrep/java/android/hidden_ui.yaml",
+          "id": "android_hidden_ui",
+          "fields": [
+            "message",
+            "metadata",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/java/crypto/cbc_padding_oracle.yaml",
+          "id": "cbc_padding_oracle",
+          "fields": [
+            "message",
+            "metadata",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/java/injection/command_injection.yaml",
+          "id": "command_injection",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-either",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/java/injection/sqlite_injection.yaml",
+          "id": "sqlite_injection",
+          "fields": [
+            "message",
+            "metadata"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/java/network/accept_self_signed.yaml",
+          "id": "accept_self_signed_certificate",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-either",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/java/xxe/xmlfactory_external_entities_enabled.yaml",
+          "id": "xmlinputfactory_xxe_enabled",
+          "fields": [
+            "pattern",
+            "pattern-either"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/java/xxe/xmlfactory_xxe.yaml",
+          "id": "xmlinputfactory_xxe",
+          "fields": [
+            "message",
+            "metadata",
+            "patterns",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/kotlin/android.yaml",
+          "id": "android_kotlin_hiddenui",
+          "fields": [
+            "message",
+            "metadata",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/kotlin/crypto.yaml",
+          "id": "cbc_kotlin_padding_oracle",
+          "fields": [
+            "message",
+            "metadata",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+          "id": "android_kotlin_command_injection",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-either",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+          "id": "android_kotlin_sql_raw_query",
+          "fields": [
+            "message",
+            "metadata",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+          "id": "android_kotlin_xmlinputfactory_xxe_enabled",
+          "fields": [
+            "pattern-either",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/kotlin/network.yaml",
+          "id": "android_kotlin_insecure_ssl",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-either",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/swift/crypto.yaml",
+          "id": "ios_insecure_random_no_generator",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-either",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/swift/network.yaml",
+          "id": "ios_dtls1_used",
+          "fields": [
+            "metadata",
+            "pattern-either",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/swift/network.yaml",
+          "id": "ios_tls12_used",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-either",
+            "patterns",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/swift/network.yaml",
+          "id": "ios_tls3_not_used",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-either",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/mobsfscan/rules/semgrep/swift/storage.yaml",
+          "id": "ios_general_paste",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-either",
+            "patterns"
+          ]
+        }
+      ],
+      "addedRules": [],
+      "removedRules": [],
+      "changedFiles": [
+        {
+          "path": "rules/mobsfscan/rules/semgrep/java/android/hidden_ui.yaml",
+          "before_sha256": "4585bd50ba6be394dce70394b421c4fde4a799b64a7357beb5f109acdadda69b",
+          "after_sha256": "2699ce9e309333f2567e81a19a1531492c8cfe8bfd9d4be229e9d0864b1f3c79"
+        },
+        {
+          "path": "rules/mobsfscan/rules/semgrep/java/crypto/cbc_padding_oracle.yaml",
+          "before_sha256": "2905ef9a2f6192aafa406d4e5a8bfcef26f60e79d06c4a132ab4d0a5e5254de9",
+          "after_sha256": "47f0836f4cf7a74314f9e663efcbbdaa9f09665eede4ed35bf774426aa29016c"
+        },
+        {
+          "path": "rules/mobsfscan/rules/semgrep/java/injection/command_injection.yaml",
+          "before_sha256": "b4c52a09a36b56f2d7ef94a885e00add692f14bd9d9fc7079a8ed9995cba3621",
+          "after_sha256": "a1e80b0b183b3d960ada4f120c3ae6598ce09b530bd06f2a9ab2ce5e9a14e84a"
+        },
+        {
+          "path": "rules/mobsfscan/rules/semgrep/java/injection/sqlite_injection.yaml",
+          "before_sha256": "5c45ebf0a4d1f2fa8367ed2f3c9f329d8b499644bf1e6b70c5b007e69e23886e",
+          "after_sha256": "d61ebe8d200e047de5b46719662261ece44d4ea6ab49f0a255ec016d060e6e70"
+        },
+        {
+          "path": "rules/mobsfscan/rules/semgrep/java/network/accept_self_signed.yaml",
+          "before_sha256": "dc21b3bd2210b84378062a6ed84cf6a85dbbfdc6dbf000f77341464520acf38c",
+          "after_sha256": "29c46ad40f052f533ea12c2d5b90aff10f2874c0b6b16ccdd627fe7bec7b0d10"
+        },
+        {
+          "path": "rules/mobsfscan/rules/semgrep/java/xxe/xmlfactory_external_entities_enabled.yaml",
+          "before_sha256": "ddd5fcde273656dd6ccff4ce669a103807fa4b5f701cf726936946ad6638207f",
+          "after_sha256": "a44756bff4af5c12cb80d4495808aa1fe836c5c70f6a41a48c2cb7ac7b108608"
+        },
+        {
+          "path": "rules/mobsfscan/rules/semgrep/java/xxe/xmlfactory_xxe.yaml",
+          "before_sha256": "750ce4bf90a84697cd18b92e0fb5e81a4f6c32ef12ce95cfa99e9a4ecea2f4cd",
+          "after_sha256": "733959af6348cbcbbc7da66a11df29783aca576c97331b14c9faf0670c20c720"
+        },
+        {
+          "path": "rules/mobsfscan/rules/semgrep/kotlin/android.yaml",
+          "before_sha256": "443e52c2fde873c3925bbc2488a8a48444e6522a342eec08749fad1599e09f08",
+          "after_sha256": "760b22c6de45d07ba084f1775296776dff2a91be6df49f2f63efabc5a104a4cc"
+        },
+        {
+          "path": "rules/mobsfscan/rules/semgrep/kotlin/crypto.yaml",
+          "before_sha256": "70117039d852b1838ff77fa240b939ddd131fa58ff573471a668027ff8f1a8a5",
+          "after_sha256": "29bf9208e8d14017233bb36cfb518cf01f2b6f05391e958eb04b52600dd64c43"
+        },
+        {
+          "path": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+          "before_sha256": "ac5714d95fd5175a5b8d209cf9d575c6dc751230141f1a68996231fd7170b7c0",
+          "after_sha256": "fb3d4ae72242f7d4224d4cb77d985845345b31f045f9e14adb595e770b5ae51c"
+        },
+        {
+          "path": "rules/mobsfscan/rules/semgrep/kotlin/network.yaml",
+          "before_sha256": "8096be1414ec1c3c4fa55d30774aa67fc3a6672d0373dd14e5dc0905915a189c",
+          "after_sha256": "1cc754e210c648fb2644b53facdf9025e2dbffc8b67cc292763951a02bf8fe71"
+        },
+        {
+          "path": "rules/mobsfscan/rules/semgrep/swift/crypto.yaml",
+          "before_sha256": "d3d0abd6a7b09ad2bda8b54ecf19017b948a1d02baeb9e69326db2571cc8b207",
+          "after_sha256": "850ee36e48721521df1fc3def9248c59b106f9164c31d77143207aba97c7149e"
+        },
+        {
+          "path": "rules/mobsfscan/rules/semgrep/swift/network.yaml",
+          "before_sha256": "e3edde30454e84eb7d18dd26fc53c5febac25d60259ba3ef7e627435a74b9af5",
+          "after_sha256": "c5b9788725b135389301fe48f77133e27b091da1b5b803c4efe2e2a50da69328"
+        },
+        {
+          "path": "rules/mobsfscan/rules/semgrep/swift/storage.yaml",
+          "before_sha256": "e451db8f1316254ed6a42a4d324d0f7d56255d50c66f08da102f105f57c18434",
+          "after_sha256": "1768e3e994b661f840e5ff8e6e770ee49ba04e5d0d7dbfc7e79f42dba9363add"
+        }
+      ]
+    },
+    {
+      "id": "gitleaks",
+      "version": "8.30.1.1",
+      "baselineArchive": "gitleaks-8.30.1.zip",
+      "baselineArchiveSha256": "6e776736b240ffca58861536004cc8eb975ae12d3e66a7991b8bca5f4906da57",
+      "baselineRules": 222,
+      "currentRules": 222,
+      "modifiedRules": [
+        {
+          "file": "upstream/gitleaks.toml",
+          "id": "airtable-personnal-access-token",
+          "fields": [
+            "keywords"
+          ]
+        }
+      ],
+      "addedRules": [],
+      "removedRules": [],
+      "changedFiles": [
+        {
+          "path": "upstream/gitleaks.toml",
+          "before_sha256": "e163e53b9e7e8a8511e77271e2b323ed057759542a6d988258afe3a1fa329caf",
+          "after_sha256": "c21e4cae279d2dd6292fd30b204ed918c372804cf2af037687b32222c54ba990"
+        }
+      ]
+    },
+    {
+      "id": "xeria-rules",
+      "version": "0.10.6",
+      "baselineArchive": "xeria-rules-0.10.4.zip",
+      "baselineArchiveSha256": "56844e268c2b1df6d6789f081dfa12a26066faa854bd0885e33945a255a3f574",
+      "baselineRules": 167,
+      "currentRules": 176,
+      "modifiedRules": [
+        {
+          "file": "rules/dart/flutter-data.yaml",
+          "id": "dart-downloaded-file-executed-without-verification",
+          "fields": [
+            "message",
+            "mode",
+            "pattern-sanitizers",
+            "pattern-sinks",
+            "pattern-sources",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/go/gin-web.yaml",
+          "id": "go-cors-wildcard-with-credentials",
+          "fields": [
+            "message",
+            "metadata",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/infra/containers-gateway.yaml",
+          "id": "compose-database-port-exposed",
+          "fields": [
+            "languages",
+            "pattern-either",
+            "pattern-regex"
+          ]
+        },
+        {
+          "file": "rules/infra/containers-gateway.yaml",
+          "id": "compose-database-port-exposed-dev",
+          "fields": [
+            "languages",
+            "pattern-either",
+            "pattern-regex"
+          ]
+        },
+        {
+          "file": "rules/infra/containers-gateway.yaml",
+          "id": "compose-docker-socket-mounted",
+          "fields": [
+            "languages",
+            "pattern-either",
+            "pattern-regex"
+          ]
+        },
+        {
+          "file": "rules/infra/containers-gateway.yaml",
+          "id": "compose-no-resource-limits",
+          "fields": [
+            "languages",
+            "message",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/infra/containers-gateway.yaml",
+          "id": "traefik-api-insecure",
+          "fields": [
+            "pattern-either"
+          ]
+        },
+        {
+          "file": "rules/javascript/browser.yaml",
+          "id": "dom-innerhtml-from-html-builder",
+          "fields": [
+            "message",
+            "metadata",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/javascript/browser.yaml",
+          "id": "dom-open-redirect-from-url",
+          "fields": [
+            "message",
+            "pattern-sanitizers",
+            "pattern-sinks"
+          ]
+        },
+        {
+          "file": "rules/javascript/browser.yaml",
+          "id": "postmessage-listener-without-origin-check",
+          "fields": [
+            "message",
+            "mode",
+            "pattern-sanitizers",
+            "pattern-sinks",
+            "pattern-sources",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/javascript/jquery-dom.yaml",
+          "id": "dom-html-from-unescaped-text-field",
+          "fields": [
+            "metadata",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/javascript/node-auth.yaml",
+          "id": "node-cors-reflect-any-origin",
+          "fields": [
+            "message",
+            "metadata",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/javascript/node-auth.yaml",
+          "id": "node-cors-wildcard-with-credentials",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-either"
+          ]
+        },
+        {
+          "file": "rules/javascript/node-data.yaml",
+          "id": "node-insecure-deserialization",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-either",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/javascript/node-data.yaml",
+          "id": "node-prototype-pollution-merge",
+          "fields": [
+            "message",
+            "metadata",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/javascript/node-data.yaml",
+          "id": "node-upload-without-file-filter",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-either",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/javascript/node-files-network.yaml",
+          "id": "express-xss-html-response",
+          "fields": [
+            "message",
+            "pattern-sanitizers",
+            "pattern-sinks",
+            "pattern-sources"
+          ]
+        },
+        {
+          "file": "rules/javascript/node-injection.yaml",
+          "id": "node-nosql-injection-mongo",
+          "fields": [
+            "pattern-sanitizers",
+            "pattern-sinks"
+          ]
+        },
+        {
+          "file": "rules/php/laravel-data-authz.yaml",
+          "id": "laravel-open-redirect-from-request",
+          "fields": [
+            "pattern-sanitizers",
+            "pattern-sources"
+          ]
+        },
+        {
+          "file": "rules/php/laravel-data-authz.yaml",
+          "id": "laravel-sensitive-field-from-unvalidated-request",
+          "fields": [
+            "message",
+            "metadata",
+            "patterns",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/php/php-command-file.yaml",
+          "id": "php-command-injection-from-request",
+          "fields": [
+            "message",
+            "pattern-sanitizers"
+          ]
+        },
+        {
+          "file": "rules/php/php-leftover-danger.yaml",
+          "id": "php-leftover-diagnostic-script-dumps-database",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-regex",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/php/php-leftover-danger.yaml",
+          "id": "php-time-bomb-destructive-query",
+          "fields": [
+            "message",
+            "metadata",
+            "severity"
+          ]
+        },
+        {
+          "file": "rules/php/php-native.yaml",
+          "id": "php-file-inclusion-from-request",
+          "fields": [
+            "message",
+            "pattern-sanitizers"
+          ]
+        },
+        {
+          "file": "rules/php/php-native.yaml",
+          "id": "php-hardcoded-credential-constant",
+          "fields": [
+            "message",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/php/php-native.yaml",
+          "id": "php-hardcoded-db-credentials",
+          "fields": [
+            "message",
+            "patterns"
+          ]
+        },
+        {
+          "file": "rules/php/php-native.yaml",
+          "id": "php-json-response-reflects-request",
+          "fields": [
+            "message",
+            "metadata",
+            "pattern-sanitizers",
+            "pattern-sinks"
+          ]
+        },
+        {
+          "file": "rules/php/php-native.yaml",
+          "id": "php-sql-string-from-request",
+          "fields": [
+            "pattern-sanitizers"
+          ]
+        },
+        {
+          "file": "rules/php/php-native.yaml",
+          "id": "php-sqli-from-request",
+          "fields": [
+            "pattern-sanitizers"
+          ]
+        },
+        {
+          "file": "rules/php/php-native.yaml",
+          "id": "php-xss-echo-request",
+          "fields": [
+            "message",
+            "pattern-sanitizers",
+            "pattern-sinks"
+          ]
+        },
+        {
+          "file": "rules/python/web-config.yaml",
+          "id": "flask-open-redirect",
+          "fields": [
+            "message",
+            "pattern-sanitizers"
+          ]
+        }
+      ],
+      "addedRules": [
+        {
+          "file": "rules/php/php-native.yaml",
+          "id": "php-html-encoding-in-unquoted-attribute"
+        },
+        {
+          "file": "rules/security-boundaries/node-jwt-fail-open.yaml",
+          "id": "xeria-node-jwt-verification-fail-open"
+        },
+        {
+          "file": "rules/security-boundaries/pyjwt-audience-disabled.yaml",
+          "id": "xeria-pyjwt-audience-check-disabled"
+        },
+        {
+          "file": "rules/security-boundaries/pyjwt-fail-open.yaml",
+          "id": "xeria-pyjwt-verification-fail-open"
+        },
+        {
+          "file": "rules/security-boundaries/pyjwt-issuer-disabled.yaml",
+          "id": "xeria-pyjwt-issuer-check-disabled"
+        },
+        {
+          "file": "rules/security-boundaries/pytorch-unsafe-load.yaml",
+          "id": "xeria-pytorch-unsafe-pickle-load"
+        },
+        {
+          "file": "rules/security-boundaries/stripe-webhook-fail-open.yaml",
+          "id": "xeria-stripe-webhook-verification-fail-open"
+        },
+        {
+          "file": "rules/security-boundaries/tarfile-fully-trusted.yaml",
+          "id": "xeria-tarfile-fully-trusted-extraction"
+        },
+        {
+          "file": "rules/security-boundaries/transformers-remote-code.yaml",
+          "id": "xeria-transformers-remote-code-trust"
+        }
+      ],
+      "removedRules": [],
+      "changedFiles": [
+        {
+          "path": "rules/dart/flutter-data.yaml",
+          "before_sha256": "fe19131510b5f1d2db18f60cd27e806d3a0e65d1b2220a2934de9d8dfc2e274a",
+          "after_sha256": "030eba3a824d9aade5109386b5bc90c0b124b75e4db63c2116ab051c5dd60869"
+        },
+        {
+          "path": "rules/go/gin-web.yaml",
+          "before_sha256": "d47debf565c69866c4490f2f462c63325f6fa23d03863fe0fd3e044aef789017",
+          "after_sha256": "71459901952fe4536c2846da2d93ce6475a3060a3bccfdf67dd2ded324ec8d64"
+        },
+        {
+          "path": "rules/infra/containers-gateway.yaml",
+          "before_sha256": "b5f2f535b0cb7d80d6afba442f2a81954c0568fa19383a3b689a30a9079241e4",
+          "after_sha256": "70f4155fb598552a824041a2bc0b553fd941a0852861529f687b521054dc0f96"
+        },
+        {
+          "path": "rules/javascript/browser.yaml",
+          "before_sha256": "c177c031c17178021d465145b75ba3c730f8924295ca47c164bd7e6ed449097d",
+          "after_sha256": "e43211edafa147a23e07a013dad9ce869bf8307a279e33df8df02eafd6f6eeb1"
+        },
+        {
+          "path": "rules/javascript/jquery-dom.yaml",
+          "before_sha256": "695682f4e87fef7a64870827c0301d5aea32484e4a169a61192d744054a62200",
+          "after_sha256": "0b101f88a8a1598252ba4dac9fb0d2722b07290bff84d3b93c1d0de10c5f1b51"
+        },
+        {
+          "path": "rules/javascript/node-auth.yaml",
+          "before_sha256": "af1cf1c067b93c687d0e5da6e66605082399dc0f6475849f66eb9a2865731d64",
+          "after_sha256": "2b9d221da0a75d74e0d784b7db30a6055250511e35b5304e025cb83690cfd75e"
+        },
+        {
+          "path": "rules/javascript/node-data.yaml",
+          "before_sha256": "67fab1e7e7507cdbaf6177175bd40909c9aa4b660098a9d68b415ba6c41bc6ff",
+          "after_sha256": "f1849069d435f772e13e3413a503544da4d059c1469415494a94e1a57d288437"
+        },
+        {
+          "path": "rules/javascript/node-files-network.yaml",
+          "before_sha256": "159021df931f652755b2cedb16ac3e3e8c5ed82a11711cc1c2e6abe0c3cfa546",
+          "after_sha256": "24df8cc704c740af4d8d744a190c7e71519f5f64ca4580ead16cc99c29aabcb5"
+        },
+        {
+          "path": "rules/javascript/node-injection.yaml",
+          "before_sha256": "5f048db977e1e8d092b5629e83242d3185daa1df08a8eda9d03a86c49f1ad2a1",
+          "after_sha256": "13b41d0f14e6fa7f5c3cb8fab057d97edaf7019720496689b17b41e03c0d250e"
+        },
+        {
+          "path": "rules/php/laravel-data-authz.yaml",
+          "before_sha256": "4db51ad4dfc1e21ebb100aab54f2e70e7529c963e970df83371cd821146507d3",
+          "after_sha256": "f9fcb7a7ac130ff7bcdc4824a666dd68bfaeba35f5933612ff61b6d269a6ffa2"
+        },
+        {
+          "path": "rules/php/php-command-file.yaml",
+          "before_sha256": "a9b269ffaaa4ba742b85c551e1bfba97d502d9075011a4c9f06d08034c05f3db",
+          "after_sha256": "a3eb27f2170a64177e941387ad68c495bd3ca607cbcc9e87b676597a43c7972d"
+        },
+        {
+          "path": "rules/php/php-leftover-danger.yaml",
+          "before_sha256": "eeb3e73351c022db0551edd091bb0b6dff41343ab66ec471a06dcb4d77809986",
+          "after_sha256": "b0c076f71cbd76f992e70466af7b449f09508935fe38620b5e6a5d08c803035e"
+        },
+        {
+          "path": "rules/php/php-native.yaml",
+          "before_sha256": "651301970549644553e3b810c05c7461ffb21a59ab8fbc5d9026bf573a51e974",
+          "after_sha256": "2f19cf3069485ac6f49b610cc1ec63c09fe31dcfe24e756d658ffe41a6686f31"
+        },
+        {
+          "path": "rules/python/web-config.yaml",
+          "before_sha256": "cbdc0776625efd0d7abea95a1c3f0e4706d04b83ebbe5be90a0d1d6297f98621",
+          "after_sha256": "d4df1e095e779f2cb9977d6221af622ab9e6ddae1a6be1aa058d6cf1298147fe"
+        },
+        {
+          "path": "rules/security-boundaries/node-jwt-fail-open.yaml",
+          "before_sha256": null,
+          "after_sha256": "0121c1ae53f93dcb0e20ff676abd18365acecc212d9836a5f917216883527f3e"
+        },
+        {
+          "path": "rules/security-boundaries/pyjwt-audience-disabled.yaml",
+          "before_sha256": null,
+          "after_sha256": "27f8fea6fe62cd71b9fa00fb074bd935e4285755a6e071fd713f602a735396fa"
+        },
+        {
+          "path": "rules/security-boundaries/pyjwt-fail-open.yaml",
+          "before_sha256": null,
+          "after_sha256": "60bc3c2b1e517638beedcfaf87338df9a730e9447460bd8aa21b507e1a5e5001"
+        },
+        {
+          "path": "rules/security-boundaries/pyjwt-issuer-disabled.yaml",
+          "before_sha256": null,
+          "after_sha256": "c8f287c57016d5bd7e2b6c9a702c0bd4ed6dffecd23f26338fbc61b80091b901"
+        },
+        {
+          "path": "rules/security-boundaries/pytorch-unsafe-load.yaml",
+          "before_sha256": null,
+          "after_sha256": "72c89b7f3e1e65fff894f39d11b33f00332572222d887ef59e1816699f1cc42a"
+        },
+        {
+          "path": "rules/security-boundaries/stripe-webhook-fail-open.yaml",
+          "before_sha256": null,
+          "after_sha256": "18703b3d5c3fc574fa0f63cab5e66d18a71f4ef592b73bf9e7847139b8cbc6e5"
+        },
+        {
+          "path": "rules/security-boundaries/tarfile-fully-trusted.yaml",
+          "before_sha256": null,
+          "after_sha256": "d31eb02ad3c03c1f749294a12d4dd614f7c1193c68b2bd886850a1ffd5b2454b"
+        },
+        {
+          "path": "rules/security-boundaries/transformers-remote-code.yaml",
+          "before_sha256": null,
+          "after_sha256": "2c2895c552e28d36e829ce3b6bc8946f9a80f115c17ae983fcb8d7c12d82f0a1"
+        },
+        {
+          "path": "suppress/aturan-paket-lain.yaml",
+          "before_sha256": "96a593bcceed65443f88e52c2007e7561f195fa60498b6b08688f95220a0e140",
+          "after_sha256": "4024242c2fe9229d10a610a6ca0eb557d2e27e0f49f6abda3b28deba6bdf3a65"
+        },
+        {
+          "path": "xeria-rules-0.10.5.zip",
+          "before_sha256": "820587a143b3ef1aacdfc3a24e6642b5d73686cf954c0d460b223397b3a012a7",
+          "after_sha256": null
+        }
+      ]
+    }
+  ]
+}

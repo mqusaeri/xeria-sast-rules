@@ -1,0 +1,28 @@
+rules:
+- id: xeria-pytorch-unsafe-pickle-load
+  languages:
+  - python
+  severity: WARNING
+  message: torch.load secara eksplisit menonaktifkan weights_only. Format pickle dapat mengeksekusi kode
+    saat deserialisasi. Gunakan weights_only=True atau format yang sesuai untuk artefak tidak tepercaya;
+    jika objek penuh diperlukan, pastikan provenance dan trust artefak sebelum memuatnya. Ini temuan review
+    konfigurasi, bukan bukti artefak tersebut berbahaya.
+  metadata:
+    judul: Pemuatan model PyTorch tanpa pembatasan pickle
+    category: security
+    subcategory:
+    - audit
+    cwe: 'CWE-502: Deserialization of Untrusted Data'
+    owasp: A03:2025 - Software Supply Chain Failures
+    confidence: HIGH
+    likelihood: MEDIUM
+    impact: HIGH
+    technology:
+    - python
+    - pytorch
+    references:
+    - https://pytorch.org/docs/stable/generated/torch.load.html
+    tested-engine: OpenGrep 1.29.0
+    limitations: Pemeriksaan pola API eksplisit; kontrol di wrapper atau pipeline lain memerlukan penilaian
+      integrasi.
+  pattern: torch.load(..., weights_only=False, ...)

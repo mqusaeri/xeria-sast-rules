@@ -1,0 +1,611 @@
+[
+  {
+    "name": "upstream-go-ssrf",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/go/lang/security/injection/tainted-url-host.yaml",
+    "rule_ids": [
+      "tainted-url-host"
+    ],
+    "filename": "main.go",
+    "code": "package main\nimport \"net/http\"\nfunc baseline(r *http.Request) { http.Get(r.URL.Query().Get(\"dest\")) }\nfunc unsafePrefix(r *http.Request) { http.Get(\"https://trusted.example\" + r.URL.Query().Get(\"dest\")) }\nfunc safePath(r *http.Request) { http.Get(\"https://trusted.example/path/\" + r.URL.Query().Get(\"dest\")) }\n",
+    "expect": [
+      {
+        "id": "tainted-url-host",
+        "line": 3
+      },
+      {
+        "id": "tainted-url-host",
+        "line": 4
+      }
+    ]
+  },
+  {
+    "name": "upstream-github-injection",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/yaml/github-actions/security/run-shell-injection.yaml",
+    "rule_ids": [
+      "run-shell-injection"
+    ],
+    "filename": "workflow.yml",
+    "code": "name: audit\non: issues\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo \"${{ github.event.issue.title }}\"\n      - run: echo \"${{ github.event.issue.title && github.event.issue.title }}\"\n      - run: echo \"${{ github.event.issue.title && 'safe' }}\"\n",
+    "expect": [
+      {
+        "id": "run-shell-injection",
+        "line": 7
+      },
+      {
+        "id": "run-shell-injection",
+        "line": 8
+      }
+    ]
+  },
+  {
+    "name": "upstream-npm-empty",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/npm/npm-missing-minimum-release-age.yaml",
+    "rule_ids": [
+      "npm-missing-minimum-release-age"
+    ],
+    "filename": ".npmrc",
+    "code": "save-exact=true\n",
+    "expect": [
+      {
+        "id": "npm-missing-minimum-release-age",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "upstream-npm-comment",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/npm/npm-missing-minimum-release-age.yaml",
+    "rule_ids": [
+      "npm-missing-minimum-release-age"
+    ],
+    "filename": ".npmrc",
+    "code": "save-exact=true\n# min-release-age should be added\n",
+    "expect": [
+      {
+        "id": "npm-missing-minimum-release-age",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "upstream-uv-toml",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/uv/uv-missing-dependency-cooldown.yaml",
+    "rule_ids": [
+      "uv-missing-dependency-cooldown"
+    ],
+    "filename": "uv.toml",
+    "code": "index-url = \"https://pypi.org/simple\"\n",
+    "expect": [
+      {
+        "id": "uv-missing-dependency-cooldown",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "upstream-uv-pyproject",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/uv/uv-missing-dependency-cooldown.yaml",
+    "rule_ids": [
+      "uv-missing-dependency-cooldown"
+    ],
+    "filename": "pyproject.toml",
+    "code": "[tool.uv]\nindex-url = \"https://pypi.org/simple\"\n",
+    "expect": [
+      {
+        "id": "uv-missing-dependency-cooldown",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "upstream-jwt-baseline",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/javascript/jsonwebtoken/security/audit/jwt-decode-without-verify.yaml",
+    "rule_ids": [
+      "jwt-decode-without-verify"
+    ],
+    "filename": "main.js",
+    "code": "const jwt = require('jsonwebtoken');\nfunction authorize(token) { const claims = jwt.decode(token); return claims.admin; }\n",
+    "expect": [
+      {
+        "id": "jwt-decode-without-verify",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "upstream-jwt-dead-verify",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/javascript/jsonwebtoken/security/audit/jwt-decode-without-verify.yaml",
+    "rule_ids": [
+      "jwt-decode-without-verify"
+    ],
+    "filename": "main.js",
+    "code": "const jwt = require('jsonwebtoken');\nfunction authorize(token) {\n const claims = jwt.decode(token);\n if (false) { jwt.verify(token, 'not-a-real-key'); }\n return claims.admin;\n}\n",
+    "expect": [
+      {
+        "id": "jwt-decode-without-verify",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "upstream-ecb-real",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/python/cryptography/security/insecure-cipher-mode-ecb.yaml",
+    "rule_ids": [
+      "insecure-cipher-mode-ecb"
+    ],
+    "filename": "main.py",
+    "code": "import cryptography.hazmat.primitives.ciphers.modes\nmode = cryptography.hazmat.primitives.ciphers.modes.ECB()\n",
+    "expect": [
+      {
+        "id": "insecure-cipher-mode-ecb",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "upstream-ecb-invalid-arg",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/python/cryptography/security/insecure-cipher-mode-ecb.yaml",
+    "rule_ids": [
+      "insecure-cipher-mode-ecb"
+    ],
+    "filename": "main.py",
+    "code": "import cryptography.hazmat.primitives.ciphers.modes\nmode = cryptography.hazmat.primitives.ciphers.modes.ECB(iv)\n",
+    "expect": [
+      {
+        "id": "insecure-cipher-mode-ecb",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "upstream-go-zip",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/go/lang/security/zip.yaml",
+    "rule_ids": [
+      "path-traversal-inside-zip-extraction"
+    ],
+    "filename": "main.go",
+    "code": "package main\nimport (\"archive/zip\"; \"path/filepath\"; \"os\")\nfunc baseline(archive string, target string) {reader, err := zip.OpenReader(archive); _ = err; for _, file := range reader.File {path := filepath.Join(target, file.Name); os.Create(path)}}\nfunc rename(archive string, target string) {zr, err := zip.OpenReader(archive); _ = err; for _, file := range zr.File {dest := filepath.Join(target, file.Name); os.Create(dest)}}\n",
+    "expect": [
+      {
+        "id": "path-traversal-inside-zip-extraction",
+        "line": 3
+      },
+      {
+        "id": "path-traversal-inside-zip-extraction",
+        "line": 4
+      }
+    ]
+  },
+  {
+    "name": "upstream-go-ssrf-fixed-authority",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/go/lang/security/injection/tainted-url-host.yaml",
+    "rule_ids": [
+      "tainted-url-host"
+    ],
+    "filename": "main.go",
+    "code": "package main\nimport \"net/http\"\nfunc f(r *http.Request) { http.Get(\"https://trusted.example/path/\" + r.URL.Query().Get(\"dest\")) }\n",
+    "expect": []
+  },
+  {
+    "name": "upstream-actions-safe-env",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/yaml/github-actions/security/run-shell-injection.yaml",
+    "rule_ids": [
+      "run-shell-injection"
+    ],
+    "filename": "workflow.yml",
+    "code": "name: safe\non: issues\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - env:\n          TITLE: ${{ github.event.issue.title }}\n        run: printf '%s\\n' \"$TITLE\"\n",
+    "expect": []
+  },
+  {
+    "name": "upstream-actions-safe-and-or",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/yaml/github-actions/security/run-shell-injection.yaml",
+    "rule_ids": [
+      "run-shell-injection"
+    ],
+    "filename": "workflow.yml",
+    "code": "name: audit\non: issues\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo \"safe\"\n      - run: echo \"${{ github.event.issue.title && 'yes' || 'no' }}\"\n      - run: echo \"${{ github.event.issue.title && 'safe' }}\"\n",
+    "expect": []
+  },
+  {
+    "name": "upstream-npm-safe",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/npm/npm-missing-minimum-release-age.yaml",
+    "rule_ids": [
+      "npm-missing-minimum-release-age"
+    ],
+    "filename": ".npmrc",
+    "code": "min-release-age = 7\n",
+    "expect": []
+  },
+  {
+    "name": "upstream-npm-commented-setting",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/npm/npm-missing-minimum-release-age.yaml",
+    "rule_ids": [
+      "npm-missing-minimum-release-age"
+    ],
+    "filename": ".npmrc",
+    "code": "# min-release-age = 7\nsave-exact=true\n",
+    "expect": [
+      {
+        "id": "npm-missing-minimum-release-age",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "upstream-npm-low-age",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/npm/npm-missing-minimum-release-age.yaml",
+    "rule_ids": [
+      "npm-missing-minimum-release-age"
+    ],
+    "filename": ".npmrc",
+    "code": "min-release-age = 2\n",
+    "expect": [
+      {
+        "id": "npm-missing-minimum-release-age",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "upstream-npm-empty-value",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/npm/npm-missing-minimum-release-age.yaml",
+    "rule_ids": [
+      "npm-missing-minimum-release-age"
+    ],
+    "filename": ".npmrc",
+    "code": "min-release-age =\n",
+    "expect": [
+      {
+        "id": "npm-missing-minimum-release-age",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "upstream-uv-root-safe",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/uv/uv-missing-dependency-cooldown.yaml",
+    "rule_ids": [
+      "uv-missing-dependency-cooldown"
+    ],
+    "filename": "uv.toml",
+    "code": "exclude-newer = \"7 days\"\nindex-url = \"https://pypi.org/simple\"\n",
+    "expect": []
+  },
+  {
+    "name": "upstream-uv-root-comment",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/uv/uv-missing-dependency-cooldown.yaml",
+    "rule_ids": [
+      "uv-missing-dependency-cooldown"
+    ],
+    "filename": "uv.toml",
+    "code": "# exclude-newer = \"7 days\"\nindex-url = \"https://pypi.org/simple\"\n",
+    "expect": [
+      {
+        "id": "uv-missing-dependency-cooldown",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "upstream-uv-root-low",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/uv/uv-missing-dependency-cooldown.yaml",
+    "rule_ids": [
+      "uv-missing-dependency-cooldown"
+    ],
+    "filename": "uv.toml",
+    "code": "exclude-newer = \"2 days\"\n",
+    "expect": [
+      {
+        "id": "uv-missing-dependency-cooldown",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "upstream-uv-table-safe",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/uv/uv-missing-dependency-cooldown.yaml",
+    "rule_ids": [
+      "uv-missing-dependency-cooldown"
+    ],
+    "filename": "pyproject.toml",
+    "code": "[tool.uv]\nexclude-newer = \"7 days\"\n",
+    "expect": []
+  },
+  {
+    "name": "upstream-uv-table-comment",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/uv/uv-missing-dependency-cooldown.yaml",
+    "rule_ids": [
+      "uv-missing-dependency-cooldown"
+    ],
+    "filename": "pyproject.toml",
+    "code": "[tool.uv]\n# exclude-newer = \"7 days\"\nmanaged = true\n",
+    "expect": [
+      {
+        "id": "uv-missing-dependency-cooldown",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "upstream-uv-table-low",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/uv/uv-missing-dependency-cooldown.yaml",
+    "rule_ids": [
+      "uv-missing-dependency-cooldown"
+    ],
+    "filename": "pyproject.toml",
+    "code": "[tool.uv]\nexclude-newer = \"2 days\"\n",
+    "expect": [
+      {
+        "id": "uv-missing-dependency-cooldown",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "upstream-uv-other-tool",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/uv/uv-missing-dependency-cooldown.yaml",
+    "rule_ids": [
+      "uv-missing-dependency-cooldown"
+    ],
+    "filename": "pyproject.toml",
+    "code": "[project]\nname = \"example\"\n[tool.other]\nexclude-newer = \"1 day\"\n",
+    "expect": []
+  },
+  {
+    "name": "upstream-uv-root-week",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/package_managers/uv/uv-missing-dependency-cooldown.yaml",
+    "rule_ids": [
+      "uv-missing-dependency-cooldown"
+    ],
+    "filename": "uv.toml",
+    "code": "exclude-newer = \"1 week\"\n",
+    "expect": []
+  },
+  {
+    "name": "upstream-jwt-verified-claims",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/javascript/jsonwebtoken/security/audit/jwt-decode-without-verify.yaml",
+    "rule_ids": [
+      "jwt-decode-without-verify"
+    ],
+    "filename": "main.js",
+    "code": "const jwt = require('jsonwebtoken');\nfunction authorize(token) { const claims = jwt.verify(token, publicKey, {algorithms: ['RS256'], audience: 'internal', issuer: 'https://issuer.example'}); return claims.admin; }\n",
+    "expect": []
+  },
+  {
+    "name": "upstream-jwt-es-import",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/javascript/jsonwebtoken/security/audit/jwt-decode-without-verify.yaml",
+    "rule_ids": [
+      "jwt-decode-without-verify"
+    ],
+    "filename": "main.js",
+    "code": "import jwt from 'jsonwebtoken';\nfunction authorize(token) { const claims = jwt.decode(token); return claims.admin; }\n",
+    "expect": [
+      {
+        "id": "jwt-decode-without-verify",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "upstream-ecb-alias",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/python/cryptography/security/insecure-cipher-mode-ecb.yaml",
+    "rule_ids": [
+      "insecure-cipher-mode-ecb"
+    ],
+    "filename": "main.py",
+    "code": "from cryptography.hazmat.primitives.ciphers import modes\nmode = modes.ECB()\n",
+    "expect": [
+      {
+        "id": "insecure-cipher-mode-ecb",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "upstream-aead-safe",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/python/cryptography/security/insecure-cipher-mode-ecb.yaml",
+    "rule_ids": [
+      "insecure-cipher-mode-ecb"
+    ],
+    "filename": "main.py",
+    "code": "from cryptography.hazmat.primitives.ciphers import modes\nmode = modes.GCM(nonce)\n",
+    "expect": []
+  },
+  {
+    "name": "upstream-zip-local-guard",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/go/lang/security/zip.yaml",
+    "rule_ids": [
+      "path-traversal-inside-zip-extraction"
+    ],
+    "filename": "main.go",
+    "code": "package main\nimport (\"archive/zip\"; \"path/filepath\"; \"os\")\nfunc f(archive string, target string) {\n zr, err := zip.OpenReader(archive); _ = err\n for _, file := range zr.File {\n  if !filepath.IsLocal(file.Name) { continue }\n  dest := filepath.Join(target, file.Name)\n  os.Create(dest)\n }\n}\n",
+    "expect": []
+  },
+  {
+    "name": "upstream-django-baseline",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/python/django/security/audit/unvalidated-password.yaml",
+    "rule_ids": [
+      "unvalidated-password"
+    ],
+    "filename": "case.py",
+    "code": "import django.contrib.auth.password_validation\ndef change(user,password):\n    user.set_password(password)\n",
+    "expect": [
+      {
+        "id": "unvalidated-password",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "upstream-django-safe",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/python/django/security/audit/unvalidated-password.yaml",
+    "rule_ids": [
+      "unvalidated-password"
+    ],
+    "filename": "case.py",
+    "code": "import django.contrib.auth.password_validation\ndef change(user,password):\n    django.contrib.auth.password_validation.validate_password(password,user=user)\n    user.set_password(password)\n",
+    "expect": []
+  },
+  {
+    "name": "upstream-django-other-password",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/python/django/security/audit/unvalidated-password.yaml",
+    "rule_ids": [
+      "unvalidated-password"
+    ],
+    "filename": "case.py",
+    "code": "import django.contrib.auth.password_validation\ndef change(user,password):\n    django.contrib.auth.password_validation.validate_password(\"a different password\",user=user)\n    user.set_password(password)\n",
+    "expect": [
+      {
+        "id": "unvalidated-password",
+        "line": 4
+      }
+    ]
+  },
+  {
+    "name": "upstream-django-swallowed-error",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/python/django/security/audit/unvalidated-password.yaml",
+    "rule_ids": [
+      "unvalidated-password"
+    ],
+    "filename": "case.py",
+    "code": "import django.contrib.auth.password_validation\ndef change(user,password):\n    try:\n        django.contrib.auth.password_validation.validate_password(password,user=user)\n    except Exception:\n        pass\n    user.set_password(password)\n",
+    "expect": [
+      {
+        "id": "unvalidated-password",
+        "line": 7
+      }
+    ]
+  },
+  {
+    "name": "upstream-oidc-none",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/terraform/aws/security/unrestricted-github-oidc-policy.yaml",
+    "rule_ids": [
+      "unrestricted-github-oidc-policy"
+    ],
+    "filename": "case.tf",
+    "code": "data \"aws_iam_policy_document\" \"github\" {\nstatement {\nactions = [\"sts:AssumeRoleWithWebIdentity\"]\nprincipals { type = \"Federated\"\nidentifiers = [\"arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com\"]\n}\n\n}\n}",
+    "expect": [
+      {
+        "id": "unrestricted-github-oidc-policy",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "upstream-oidc-wildcard",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/terraform/aws/security/unrestricted-github-oidc-policy.yaml",
+    "rule_ids": [
+      "unrestricted-github-oidc-policy"
+    ],
+    "filename": "case.tf",
+    "code": "data \"aws_iam_policy_document\" \"github\" {\nstatement {\nactions = [\"sts:AssumeRoleWithWebIdentity\"]\nprincipals { type = \"Federated\"\nidentifiers = [\"arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com\"]\n}\ncondition { test = \"StringLike\"\nvariable = \"token.actions.githubusercontent.com:sub\"\nvalues = [\"repo:*\"]\n}\n}\n}",
+    "expect": [
+      {
+        "id": "unrestricted-github-oidc-policy",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "upstream-oidc-safe",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/terraform/aws/security/unrestricted-github-oidc-policy.yaml",
+    "rule_ids": [
+      "unrestricted-github-oidc-policy"
+    ],
+    "filename": "case.tf",
+    "code": "data \"aws_iam_policy_document\" \"github\" {\nstatement {\nactions = [\"sts:AssumeRoleWithWebIdentity\"]\nprincipals { type = \"Federated\"\nidentifiers = [\"arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com\"]\n}\ncondition { test = \"StringEquals\"\nvariable = \"token.actions.githubusercontent.com:sub\"\nvalues = [\"repo:example/project:ref:refs/heads/main\"]\n}\n}\n}",
+    "expect": []
+  },
+  {
+    "name": "upstream-oidc-negative-operator",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/terraform/aws/security/unrestricted-github-oidc-policy.yaml",
+    "rule_ids": [
+      "unrestricted-github-oidc-policy"
+    ],
+    "filename": "case.tf",
+    "code": "data \"aws_iam_policy_document\" \"github\" {\nstatement {\nactions = [\"sts:AssumeRoleWithWebIdentity\"]\nprincipals { type = \"Federated\"\nidentifiers = [\"arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com\"]\n}\ncondition { test = \"StringNotEquals\"\nvariable = \"token.actions.githubusercontent.com:sub\"\nvalues = [\"repo:example/project:ref:refs/heads/main\"]\n}\n}\n}",
+    "expect": [
+      {
+        "id": "unrestricted-github-oidc-policy",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "upstream-oidc-safe-scoped-branch",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/terraform/aws/security/unrestricted-github-oidc-policy.yaml",
+    "rule_ids": [
+      "unrestricted-github-oidc-policy"
+    ],
+    "filename": "case.tf",
+    "code": "data \"aws_iam_policy_document\" \"github\" {\nstatement {\nactions = [\"sts:AssumeRoleWithWebIdentity\"]\nprincipals { type = \"Federated\"\nidentifiers = [\"arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com\"]\n}\ncondition { test = \"StringLike\"\nvariable = \"token.actions.githubusercontent.com:sub\"\nvalues = [\"repo:example/project:ref:refs/heads/*\"]\n}\n}\n}",
+    "expect": []
+  },
+  {
+    "name": "upstream-math-rand-review",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/go/lang/security/audit/crypto/math_random.yaml",
+    "rule_ids": [
+      "math-random-used"
+    ],
+    "filename": "case.go",
+    "code": "package main\nimport \"math/rand\"\nfunc f() int { return rand.Intn(100) }\n",
+    "expect": [
+      {
+        "id": "math-random-used",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "upstream-crypto-rand-safe",
+    "pack": "semgrep-rules",
+    "rule_file": "rules/go/lang/security/audit/crypto/math_random.yaml",
+    "rule_ids": [
+      "math-random-used"
+    ],
+    "filename": "case.go",
+    "code": "package main\nimport \"crypto/rand\"\nfunc f() { b := make([]byte,32); rand.Read(b) }\n",
+    "expect": []
+  }
+]

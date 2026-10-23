@@ -1,0 +1,30 @@
+rules:
+- id: xeria-node-jwt-verification-fail-open
+  languages:
+  - javascript
+  - typescript
+  severity: WARNING
+  message: Fungsi mengembalikan true setelah jsonwebtoken.verify melempar error. Jika nilai itu dipakai
+    untuk mengizinkan akses, token invalid dapat diterima. Tolak akses atau teruskan error, dan verifikasi
+    kontrak pemanggil.
+  metadata:
+    judul: Kegagalan verifikasi JWT menghasilkan izin
+    category: security
+    subcategory:
+    - audit
+    cwe: 'CWE-636: Not Failing Securely'
+    owasp: A10:2025 - Mishandling of Exceptional Conditions
+    confidence: MEDIUM
+    likelihood: MEDIUM
+    impact: HIGH
+    technology:
+    - javascript
+    - typescript
+    - jsonwebtoken
+    references:
+    - https://github.com/auth0/node-jsonwebtoken#jwtverifytoken-secretorpublickey-options-callback
+    tested-engine: OpenGrep 1.29.0
+    limitations: Nilai True/true belum diikat ke keputusan akses pada pemanggil. Periksa apakah boolean
+      berarti izin atau justru indikator error; rule ini review alur kegagalan, bukan bukti authorization
+      bypass.
+  pattern: try { ... jsonwebtoken.verify(...); ... } catch ($ERROR) { ... return true; }

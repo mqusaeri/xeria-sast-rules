@@ -1,0 +1,333 @@
+rules:
+- id: mcp-ssrf-python
+  mode: taint
+  languages:
+  - python
+  severity: ERROR
+  message: MCP tool input reaches an HTTP destination. Enforce a scheme/host/port allowlist and a network
+    egress policy, including redirect and resolved-address checks. Parsing a URL alone does not validate
+    its destination. Custom validators require explicit, tested integration.
+  metadata:
+    cwe: 'CWE-918: Server-Side Request Forgery (SSRF)'
+    category: security
+    confidence: HIGH
+    subcategory:
+    - vuln
+    likelihood: MEDIUM
+    impact: HIGH
+    technology:
+    - mcp
+    references:
+    - https://modelcontextprotocol.io/specification/draft/basic/security_best_practices
+  pattern-sources:
+  - patterns:
+    - pattern: "@$SERVER.tool(...)\ndef $FUNC(..., $PARAM, ...):\n    ...\n"
+    - focus-metavariable: $PARAM
+  pattern-sinks:
+  - patterns:
+    - pattern: requests.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern: requests.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern: requests.put($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern: requests.delete($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern: requests.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern: urllib.request.urlopen($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern: httpx.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern: httpx.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern: httpx.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = httpx.Client(...)
+
+        ...'
+    - pattern: $SESSION.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with httpx.Client(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with httpx.Client(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = httpx.Client(...)
+
+        ...'
+    - pattern: $SESSION.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with httpx.Client(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with httpx.Client(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = httpx.Client(...)
+
+        ...'
+    - pattern: $SESSION.put($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with httpx.Client(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.put($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with httpx.Client(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.put($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = httpx.Client(...)
+
+        ...'
+    - pattern: $SESSION.delete($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with httpx.Client(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.delete($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with httpx.Client(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.delete($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = httpx.Client(...)
+
+        ...'
+    - pattern: $SESSION.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with httpx.Client(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with httpx.Client(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = httpx.AsyncClient(...)
+
+        ...'
+    - pattern: $SESSION.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with httpx.AsyncClient(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with httpx.AsyncClient(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = httpx.AsyncClient(...)
+
+        ...'
+    - pattern: $SESSION.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with httpx.AsyncClient(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with httpx.AsyncClient(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = httpx.AsyncClient(...)
+
+        ...'
+    - pattern: $SESSION.put($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with httpx.AsyncClient(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.put($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with httpx.AsyncClient(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.put($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = httpx.AsyncClient(...)
+
+        ...'
+    - pattern: $SESSION.delete($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with httpx.AsyncClient(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.delete($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with httpx.AsyncClient(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.delete($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = httpx.AsyncClient(...)
+
+        ...'
+    - pattern: $SESSION.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with httpx.AsyncClient(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with httpx.AsyncClient(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = aiohttp.ClientSession(...)
+
+        ...'
+    - pattern: $SESSION.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with aiohttp.ClientSession(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with aiohttp.ClientSession(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = aiohttp.ClientSession(...)
+
+        ...'
+    - pattern: $SESSION.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with aiohttp.ClientSession(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with aiohttp.ClientSession(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = aiohttp.ClientSession(...)
+
+        ...'
+    - pattern: $SESSION.put($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with aiohttp.ClientSession(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.put($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with aiohttp.ClientSession(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.put($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = aiohttp.ClientSession(...)
+
+        ...'
+    - pattern: $SESSION.delete($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with aiohttp.ClientSession(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.delete($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with aiohttp.ClientSession(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.delete($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = aiohttp.ClientSession(...)
+
+        ...'
+    - pattern: $SESSION.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with aiohttp.ClientSession(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with aiohttp.ClientSession(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = requests.Session(...)
+
+        ...'
+    - pattern: $SESSION.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with requests.Session(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with requests.Session(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.get($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = requests.Session(...)
+
+        ...'
+    - pattern: $SESSION.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with requests.Session(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with requests.Session(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.post($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = requests.Session(...)
+
+        ...'
+    - pattern: $SESSION.put($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with requests.Session(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.put($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with requests.Session(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.put($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = requests.Session(...)
+
+        ...'
+    - pattern: $SESSION.delete($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with requests.Session(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.delete($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with requests.Session(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.delete($SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: '$SESSION = requests.Session(...)
+
+        ...'
+    - pattern: $SESSION.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "with requests.Session(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK
+  - patterns:
+    - pattern-inside: "async with requests.Session(...) as $SESSION:\n    ..."
+    - pattern: $SESSION.request($METHOD, $SINK, ...)
+    - focus-metavariable: $SINK

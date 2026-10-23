@@ -1,0 +1,20 @@
+rules:
+- id: xmlinputfactory_xxe_enabled
+  message: 'XML external entities are enabled for this XMLInputFactory. This is vulnerable to XML external
+    entity attacks. Disable external entities by setting "javax.xml.stream.isSupportingExternalEntities"
+    to false.
+
+    '
+  languages:
+  - java
+  severity: ERROR
+  metadata:
+    cwe: cwe-611
+    owasp-mobile: m8
+    masvs: platform-2
+    reference: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x04h-Testing-Code-Quality.md#injection-flaws-mstg-arch-2-and-mstg-platform-2
+  pattern-either:
+  - pattern: $XMLFACTORY.setProperty("javax.xml.stream.isSupportingExternalEntities", true)
+  - pattern: $XMLFACTORY.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, true)
+  - pattern: $XMLFACTORY.setProperty(javax.xml.stream.XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES,
+      true)

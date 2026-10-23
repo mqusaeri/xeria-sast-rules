@@ -1,0 +1,1326 @@
+[
+  {
+    "name": "redirect_raw",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next = new URLSearchParams(location.search).get('next'); window.location.href=next;\n",
+    "expect": [
+      {
+        "id": "dom-open-redirect-from-url",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "redirect_slash",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next = new URLSearchParams(location.search).get('next'); if(next.startsWith(\"/\")){window.location.href=next;}\n",
+    "expect": [
+      {
+        "id": "dom-open-redirect-from-url",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "redirect_html_sanitizer",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next = new URLSearchParams(location.search).get('next'); window.location.href=DOMPurify.sanitize(next);\n",
+    "expect": [
+      {
+        "id": "dom-open-redirect-from-url",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "redirect_fixed",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "window.location.href=\"/dashboard\";\n",
+    "expect": []
+  },
+  {
+    "name": "redirect_same_origin",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next = new URLSearchParams(location.search).get('next'); const target=new URL(next,location.href); if(target.origin===location.origin){window.location.href=target.href;}\n",
+    "expect": []
+  },
+  {
+    "name": "redirect_unrelated_origin",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next = new URLSearchParams(location.search).get('next'); const target=new URL(\"/safe\",location.href); const other=new URL(next,location.href); if(target.origin===location.origin){window.location.href=other.href;}\n",
+    "expect": [
+      {
+        "id": "dom-open-redirect-from-url",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "postmessage_raw",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "postmessage-listener-without-origin-check"
+    ],
+    "filename": "case.js",
+    "code": "window.addEventListener('message', event => {document.body.innerHTML=event.data;});\n",
+    "expect": [
+      {
+        "id": "postmessage-listener-without-origin-check",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "postmessage_log_origin",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "postmessage-listener-without-origin-check"
+    ],
+    "filename": "case.js",
+    "code": "window.addEventListener('message', event => {console.log(event.origin);document.body.innerHTML=event.data;});\n",
+    "expect": [
+      {
+        "id": "postmessage-listener-without-origin-check",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "postmessage_guard",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "postmessage-listener-without-origin-check"
+    ],
+    "filename": "case.js",
+    "code": "window.addEventListener('message', event => {if(event.origin === 'https://trusted.example'){document.body.innerHTML=event.data;}});\n",
+    "expect": []
+  },
+  {
+    "name": "postmessage_return_guard",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "postmessage-listener-without-origin-check"
+    ],
+    "filename": "case.js",
+    "code": "window.addEventListener('message', event => {if(event.origin !== 'https://trusted.example'){return;} document.body.innerHTML=event.data;});\n",
+    "expect": []
+  },
+  {
+    "name": "postmessage_harmless",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "postmessage-listener-without-origin-check"
+    ],
+    "filename": "case.js",
+    "code": "window.addEventListener('message', event => {console.log(event.data);});\n",
+    "expect": []
+  },
+  {
+    "name": "postmessage_wrong_event",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "postmessage-listener-without-origin-check"
+    ],
+    "filename": "case.js",
+    "code": "window.addEventListener('message', event => {if(other.origin === 'https://trusted.example'){document.body.innerHTML=event.data;}});\n",
+    "expect": [
+      {
+        "id": "postmessage-listener-without-origin-check",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "builder_arrow",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-innerhtml-from-html-builder"
+    ],
+    "filename": "case.js",
+    "code": "const make=(name)=>`<b>${name}</b>`; node.innerHTML=make(user.name);\n",
+    "expect": [
+      {
+        "id": "dom-innerhtml-from-html-builder",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "builder_function",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-innerhtml-from-html-builder"
+    ],
+    "filename": "case.js",
+    "code": "function make(name){return `<b>${name}</b>`;} node.innerHTML=make(user.name);\n",
+    "expect": [
+      {
+        "id": "dom-innerhtml-from-html-builder",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "builder_static",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-innerhtml-from-html-builder"
+    ],
+    "filename": "case.js",
+    "code": "function make(){return `<b>hello</b>`;} node.innerHTML=make();\n",
+    "expect": []
+  },
+  {
+    "name": "builder_sanitized",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-innerhtml-from-html-builder"
+    ],
+    "filename": "case.js",
+    "code": "function make(name){return DOMPurify.sanitize(`<b>${name}</b>`);} node.innerHTML=make(user.name);\n",
+    "expect": []
+  },
+  {
+    "name": "nosql_direct",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-injection.yaml",
+    "rule_ids": [
+      "node-nosql-injection-mongo"
+    ],
+    "filename": "case.js",
+    "code": "function run(req){return users.findOne(req.body);}\n",
+    "expect": [
+      {
+        "id": "node-nosql-injection-mongo",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "nosql_alias",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-injection.yaml",
+    "rule_ids": [
+      "node-nosql-injection-mongo"
+    ],
+    "filename": "case.js",
+    "code": "function run(req){const filter=req.body;return users.findOne(filter);}\n",
+    "expect": [
+      {
+        "id": "node-nosql-injection-mongo",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "nosql_string",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-injection.yaml",
+    "rule_ids": [
+      "node-nosql-injection-mongo"
+    ],
+    "filename": "case.js",
+    "code": "function run(req){return users.findOne({email:String(req.body.email)});}\n",
+    "expect": []
+  },
+  {
+    "name": "nosql_constant",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-injection.yaml",
+    "rule_ids": [
+      "node-nosql-injection-mongo"
+    ],
+    "filename": "case.js",
+    "code": "users.findOne({active:true});\n",
+    "expect": []
+  },
+  {
+    "name": "nosql_fake_sanitizer",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-injection.yaml",
+    "rule_ids": [
+      "node-nosql-injection-mongo"
+    ],
+    "filename": "case.js",
+    "code": "function run(req){return users.findOne(sanitize(req.body));}\n",
+    "expect": [
+      {
+        "id": "node-nosql-injection-mongo",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "dart_raw",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,path);await Process.run(path,[]);}\n",
+    "expect": [
+      {
+        "id": "dart-downloaded-file-executed-without-verification",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "dart_unrelated_hash",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {var h=sha256.convert([1,2,3]);await client.download(url,path);await Process.run(path,[]);}\n",
+    "expect": [
+      {
+        "id": "dart-downloaded-file-executed-without-verification",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "dart_ignored_verify",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,path);if(verifySignature(other)){print(\"ok\");}await Process.run(path,[]);}\n",
+    "expect": [
+      {
+        "id": "dart-downloaded-file-executed-without-verification",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "dart_inline_digest_guard",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,path);if(sha256.convert(await File(path).readAsBytes()).toString()==\"abc\"){await Process.run(path,[]);}}\n",
+    "expect": []
+  },
+  {
+    "name": "dart_const_exec",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await Process.run(\"trusted.exe\",[]);}\n",
+    "expect": []
+  },
+  {
+    "name": "traefik_true",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "traefik-api-insecure"
+    ],
+    "filename": "traefik.yaml",
+    "code": "command:\n  - --api.insecure=true\n",
+    "expect": [
+      {
+        "id": "traefik-api-insecure",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "traefik_flag",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "traefik-api-insecure"
+    ],
+    "filename": "traefik.yaml",
+    "code": "command:\n  - --api.insecure\n",
+    "expect": [
+      {
+        "id": "traefik-api-insecure",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "traefik_false",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "traefik-api-insecure"
+    ],
+    "filename": "traefik.yaml",
+    "code": "command:\n  - --api.insecure=false\n",
+    "expect": []
+  },
+  {
+    "name": "traefik_quoted_false",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "traefik-api-insecure"
+    ],
+    "filename": "traefik.yaml",
+    "code": "command: [\"--api.insecure=false\"]\n",
+    "expect": []
+  },
+  {
+    "name": "jquery_message",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/jquery-dom.yaml",
+    "rule_ids": [
+      "dom-html-from-unescaped-text-field"
+    ],
+    "filename": "case.js",
+    "code": "$(\"#m\").html(`<b>${data.message}</b>`);\n",
+    "expect": [
+      {
+        "id": "dom-html-from-unescaped-text-field",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "jquery_filename",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/jquery-dom.yaml",
+    "rule_ids": [
+      "dom-html-from-unescaped-text-field"
+    ],
+    "filename": "case.js",
+    "code": "$(\"#m\").html(`<b>${file.name}</b>`);\n",
+    "expect": [
+      {
+        "id": "dom-html-from-unescaped-text-field",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "jquery_static",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/jquery-dom.yaml",
+    "rule_ids": [
+      "dom-html-from-unescaped-text-field"
+    ],
+    "filename": "case.js",
+    "code": "$(\"#m\").html(\"<b>hello</b>\");\n",
+    "expect": []
+  },
+  {
+    "name": "jquery_text",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/jquery-dom.yaml",
+    "rule_ids": [
+      "dom-html-from-unescaped-text-field"
+    ],
+    "filename": "case.js",
+    "code": "$(\"#m\").text(data.message);\n",
+    "expect": []
+  },
+  {
+    "name": "jquery_sanitized",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/jquery-dom.yaml",
+    "rule_ids": [
+      "dom-html-from-unescaped-text-field"
+    ],
+    "filename": "case.js",
+    "code": "$(\"#m\").html(DOMPurify.sanitize(`<b>${data.message}</b>`));\n",
+    "expect": []
+  },
+  {
+    "name": "response_direct",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-files-network.yaml",
+    "rule_ids": [
+      "express-xss-html-response"
+    ],
+    "filename": "case.js",
+    "code": "function run(req,res){res.send(\"<p>\"+req.query.q+\"</p>\");}\n",
+    "expect": [
+      {
+        "id": "express-xss-html-response",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "response_alias",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-files-network.yaml",
+    "rule_ids": [
+      "express-xss-html-response"
+    ],
+    "filename": "case.js",
+    "code": "function run(req,res){const html=\"<p>\"+req.query.q+\"</p>\";res.send(html);}\n",
+    "expect": [
+      {
+        "id": "express-xss-html-response",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "response_json",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-files-network.yaml",
+    "rule_ids": [
+      "express-xss-html-response"
+    ],
+    "filename": "case.js",
+    "code": "function run(req,res){res.json({message:req.query.q});}\n",
+    "expect": []
+  },
+  {
+    "name": "response_safe",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-files-network.yaml",
+    "rule_ids": [
+      "express-xss-html-response"
+    ],
+    "filename": "case.js",
+    "code": "function run(req,res){res.send(DOMPurify.sanitize(req.query.q));}\n",
+    "expect": []
+  },
+  {
+    "name": "response_unsafe_template",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-files-network.yaml",
+    "rule_ids": [
+      "express-xss-html-response"
+    ],
+    "filename": "case.js",
+    "code": "function run(req,res){res.send(ejs.render(\"<%- name %>\",{name:req.query.q}));}\n",
+    "expect": [
+      {
+        "id": "express-xss-html-response",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "cors_reflected",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-auth.yaml",
+    "rule_ids": [
+      "node-cors-wildcard-with-credentials"
+    ],
+    "filename": "case.js",
+    "code": "app.use(cors({origin:true,credentials:true}));\n",
+    "expect": [
+      {
+        "id": "node-cors-wildcard-with-credentials",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "cors_wildcard",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-auth.yaml",
+    "rule_ids": [
+      "node-cors-wildcard-with-credentials"
+    ],
+    "filename": "case.js",
+    "code": "app.use(cors({origin:\"*\",credentials:true}));\n",
+    "expect": []
+  },
+  {
+    "name": "cors_fixed",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-auth.yaml",
+    "rule_ids": [
+      "node-cors-wildcard-with-credentials"
+    ],
+    "filename": "case.js",
+    "code": "app.use(cors({origin:\"https://trusted.example\",credentials:true}));\n",
+    "expect": []
+  },
+  {
+    "name": "upload_no_controls",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-data.yaml",
+    "rule_ids": [
+      "node-upload-without-file-filter"
+    ],
+    "filename": "case.js",
+    "code": "const upload=multer({dest:\"uploads/\"});\n",
+    "expect": [
+      {
+        "id": "node-upload-without-file-filter",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "upload_filter_only",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-data.yaml",
+    "rule_ids": [
+      "node-upload-without-file-filter"
+    ],
+    "filename": "case.js",
+    "code": "const upload=multer({fileFilter:validateType});\n",
+    "expect": [
+      {
+        "id": "node-upload-without-file-filter",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "upload_size_only",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-data.yaml",
+    "rule_ids": [
+      "node-upload-without-file-filter"
+    ],
+    "filename": "case.js",
+    "code": "const upload=multer({limits:{fileSize:1000}});\n",
+    "expect": [
+      {
+        "id": "node-upload-without-file-filter",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "upload_accept_all",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-data.yaml",
+    "rule_ids": [
+      "node-upload-without-file-filter"
+    ],
+    "filename": "case.js",
+    "code": "const upload=multer({fileFilter:(req,file,cb)=>cb(null,true),limits:{fileSize:1000}});\n",
+    "expect": [
+      {
+        "id": "node-upload-without-file-filter",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "upload_configured",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-data.yaml",
+    "rule_ids": [
+      "node-upload-without-file-filter"
+    ],
+    "filename": "case.js",
+    "code": "const upload=multer({fileFilter:validateType,limits:{fileSize:1000}});\n",
+    "expect": []
+  },
+  {
+    "name": "upload_zero_size",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-data.yaml",
+    "rule_ids": [
+      "node-upload-without-file-filter"
+    ],
+    "filename": "case.js",
+    "code": "const upload=multer({fileFilter:validateType,limits:{fileSize:0}});\n",
+    "expect": [
+      {
+        "id": "node-upload-without-file-filter",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "deserialize_unknown_safe_library",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-data.yaml",
+    "rule_ids": [
+      "node-insecure-deserialization"
+    ],
+    "filename": "case.js",
+    "code": "customSerializer.unserialize(data);\n",
+    "expect": []
+  },
+  {
+    "name": "deserialize_node_serialize",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-data.yaml",
+    "rule_ids": [
+      "node-insecure-deserialization"
+    ],
+    "filename": "case.js",
+    "code": "const serializer=require(\"node-serialize\");serializer.unserialize(data);\n",
+    "expect": [
+      {
+        "id": "node-insecure-deserialization",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "deserialize_node_inline",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-data.yaml",
+    "rule_ids": [
+      "node-insecure-deserialization"
+    ],
+    "filename": "case.js",
+    "code": "require(\"node-serialize\").unserialize(data);\n",
+    "expect": [
+      {
+        "id": "node-insecure-deserialization",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "deserialize_node_import",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-data.yaml",
+    "rule_ids": [
+      "node-insecure-deserialization"
+    ],
+    "filename": "case.js",
+    "code": "import serializer from \"node-serialize\";serializer.unserialize(data);\n",
+    "expect": [
+      {
+        "id": "node-insecure-deserialization",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "compose_one_unlimited",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "compose-no-resource-limits"
+    ],
+    "filename": "compose.yaml",
+    "code": "services:\n  app:\n    image: example\n  db:\n    image: postgres\n    mem_limit: 1g\n",
+    "expect": [
+      {
+        "id": "compose-no-resource-limits",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "compose_memory_limit",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "compose-no-resource-limits"
+    ],
+    "filename": "compose.yaml",
+    "code": "services:\n  app:\n    image: example\n    mem_limit: 1g\n",
+    "expect": []
+  },
+  {
+    "name": "compose_deploy_limit",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "compose-no-resource-limits"
+    ],
+    "filename": "compose.yaml",
+    "code": "services:\n  app:\n    image: example\n    deploy:\n      resources:\n        limits:\n          memory: 1g\n",
+    "expect": []
+  },
+  {
+    "name": "compose_reservation_not_limit",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "compose-no-resource-limits"
+    ],
+    "filename": "compose.yaml",
+    "code": "services:\n  app:\n    image: example\n    mem_reservation: 1g\n",
+    "expect": [
+      {
+        "id": "compose-no-resource-limits",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "compose_comment_not_limit",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "compose-no-resource-limits"
+    ],
+    "filename": "compose.yaml",
+    "code": "services:\n  app:\n    image: example\n    # mem_limit: 1g\n",
+    "expect": [
+      {
+        "id": "compose-no-resource-limits",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "compose_other_key_not_limit",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "compose-no-resource-limits"
+    ],
+    "filename": "compose.yaml",
+    "code": "services:\n  app:\n    image: example\nx-limits:\n  mem_limit: 1g\n",
+    "expect": [
+      {
+        "id": "compose-no-resource-limits",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "compose_port_long",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "compose-database-port-exposed"
+    ],
+    "filename": "compose.yaml",
+    "code": "services:\n  db:\n    image: postgres\n    ports:\n      - target: 5432\n        published: \"5432\"\n",
+    "expect": [
+      {
+        "id": "compose-database-port-exposed",
+        "line": 5
+      }
+    ]
+  },
+  {
+    "name": "compose_port_long_local",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "compose-database-port-exposed"
+    ],
+    "filename": "compose.yaml",
+    "code": "services:\n  db:\n    image: postgres\n    ports:\n      - target: 5432\n        published: \"5432\"\n        host_ip: \"127.0.0.1\"\n",
+    "expect": []
+  },
+  {
+    "name": "compose_port_long_all",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "compose-database-port-exposed"
+    ],
+    "filename": "compose.yaml",
+    "code": "services:\n  db:\n    image: postgres\n    ports:\n      - target: 5432\n        published: \"5432\"\n        host_ip: \"0.0.0.0\"\n",
+    "expect": [
+      {
+        "id": "compose-database-port-exposed",
+        "line": 5
+      }
+    ]
+  },
+  {
+    "name": "compose_port_short",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "compose-database-port-exposed"
+    ],
+    "filename": "compose.yaml",
+    "code": "services:\n  db:\n    image: postgres\n    ports:\n      - \"5432:5432\"\n",
+    "expect": [
+      {
+        "id": "compose-database-port-exposed",
+        "line": 5
+      }
+    ]
+  },
+  {
+    "name": "compose_port_local",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "compose-database-port-exposed"
+    ],
+    "filename": "compose.yaml",
+    "code": "services:\n  db:\n    image: postgres\n    ports:\n      - \"127.0.0.1:5432:5432\"\n",
+    "expect": []
+  },
+  {
+    "name": "compose_socket_long",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "compose-docker-socket-mounted"
+    ],
+    "filename": "compose.yaml",
+    "code": "services:\n  app:\n    image: example\n    volumes:\n      - type: bind\n        source: /var/run/docker.sock\n        target: /var/run/docker.sock\n",
+    "expect": [
+      {
+        "id": "compose-docker-socket-mounted",
+        "line": 6
+      }
+    ]
+  },
+  {
+    "name": "compose_socket_safe",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "compose-docker-socket-mounted"
+    ],
+    "filename": "compose.yaml",
+    "code": "services:\n  app:\n    image: example\n    volumes:\n      - type: bind\n        source: /srv/data\n        target: /data\n",
+    "expect": []
+  },
+  {
+    "name": "response_object_json",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/node-files-network.yaml",
+    "rule_ids": [
+      "express-xss-html-response"
+    ],
+    "filename": "case.js",
+    "code": "function run(req,res){res.send({message:req.query.q});}\n",
+    "expect": []
+  },
+  {
+    "name": "redirect_null_origin",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next=new URLSearchParams(location.search).get(\"next\");const target=new URL(next,location.href);if(target.origin===\"null\"){window.location.href=target.href;}\n",
+    "expect": [
+      {
+        "id": "dom-open-redirect-from-url",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "redirect_literal_origin",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next=new URLSearchParams(location.search).get(\"next\");const target=new URL(next,location.href);if(target.origin===\"https://trusted.example\"){window.location.href=target.href;}\n",
+    "expect": []
+  },
+  {
+    "name": "traefik_comment",
+    "pack": "xeria-rules",
+    "rule_file": "rules/infra/containers-gateway.yaml",
+    "rule_ids": [
+      "traefik-api-insecure"
+    ],
+    "filename": "traefik.yaml",
+    "code": "# --api.insecure=true\ncommand: [\"server\"] # --api.insecure\n",
+    "expect": []
+  },
+  {
+    "name": "js_redirect_else",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next = new URLSearchParams(location.search).get(\"next\"); const target=new URL(next,location.href); if(target.origin===location.origin){console.log(\"safe\");}else{window.location.href=target.href;}\n",
+    "expect": [
+      {
+        "id": "dom-open-redirect-from-url",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "js_redirect_reassign",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next = new URLSearchParams(location.search).get(\"next\"); let target=new URL(\"/safe\",location.href); if(target.origin===location.origin){target=new URL(next);window.location.href=target.href;}\n",
+    "expect": [
+      {
+        "id": "dom-open-redirect-from-url",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "js_redirect_mutate",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next = new URLSearchParams(location.search).get(\"next\"); const target=new URL(\"/safe\",location.href); if(target.origin===location.origin){target.href=next;window.location.href=target.href;}\n",
+    "expect": [
+      {
+        "id": "dom-open-redirect-from-url",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "js_postmessage_else",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "postmessage-listener-without-origin-check"
+    ],
+    "filename": "case.js",
+    "code": "window.addEventListener(\"message\", (event)=>{ if(event.origin===\"https://trusted.test\"){console.log(\"ok\");}else{document.body.innerHTML=event.data;} });\n",
+    "expect": [
+      {
+        "id": "postmessage-listener-without-origin-check",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "dart_check_after_exec",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,path); var hash=sha256.convert(await File(path).readAsBytes()).toString(); await Process.run(path,[]); if(hash==\"abc\"){print(\"ok\");}}\n",
+    "expect": [
+      {
+        "id": "dart-downloaded-file-executed-without-verification",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "dart_else_exec",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,path); if(sha256.convert(await File(path).readAsBytes()).toString()==\"abc\"){print(\"ok\");} else {await Process.run(path,[]);}}\n",
+    "expect": [
+      {
+        "id": "dart-downloaded-file-executed-without-verification",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "redirect_after_guard",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next=new URLSearchParams(location.search).get(\"next\");const target=new URL(next,location.href);if(target.origin===location.origin){console.log(\"checked\");}window.location.href=target.href;\n",
+    "expect": [
+      {
+        "id": "dom-open-redirect-from-url",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "redirect_safe_then_else",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next=new URLSearchParams(location.search).get(\"next\");const target=new URL(next,location.href);if(target.origin===location.origin){window.location.href=target.href;}else{window.location.href=\"/safe\";}\n",
+    "expect": []
+  },
+  {
+    "name": "redirect_bracket_mutation",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next=new URLSearchParams(location.search).get(\"next\");const target=new URL(next,location.href);if(target.origin===location.origin){target[\"href\"]=next;window.location.href=target.href;}\n",
+    "expect": [
+      {
+        "id": "dom-open-redirect-from-url",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "redirect_nested_reassignment",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "dom-open-redirect-from-url"
+    ],
+    "filename": "case.js",
+    "code": "const next=new URLSearchParams(location.search).get(\"next\");let target=new URL(\"/safe\",location.href);if(target.origin===location.origin){if(flag){target=new URL(next);}window.location.href=target.href;}\n",
+    "expect": [
+      {
+        "id": "dom-open-redirect-from-url",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "postmessage_after_guard",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "postmessage-listener-without-origin-check"
+    ],
+    "filename": "case.js",
+    "code": "window.addEventListener(\"message\",event=>{if(event.origin===\"https://trusted.test\"){console.log(\"ok\");}document.body.innerHTML=event.data;});\n",
+    "expect": [
+      {
+        "id": "postmessage-listener-without-origin-check",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "postmessage_guard_reassignment",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "postmessage-listener-without-origin-check"
+    ],
+    "filename": "case.js",
+    "code": "window.addEventListener(\"message\",event=>{if(event.origin===\"https://trusted.test\"){event=replacement;document.body.innerHTML=event.data;}});\n",
+    "expect": [
+      {
+        "id": "postmessage-listener-without-origin-check",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "postmessage_return_reassignment",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "postmessage-listener-without-origin-check"
+    ],
+    "filename": "case.js",
+    "code": "window.addEventListener(\"message\",event=>{if(event.origin!==\"https://trusted.test\"){return;}event=replacement;document.body.innerHTML=event.data;});\n",
+    "expect": [
+      {
+        "id": "postmessage-listener-without-origin-check",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "postmessage_safe_then_else",
+    "pack": "xeria-rules",
+    "rule_file": "rules/javascript/browser.yaml",
+    "rule_ids": [
+      "postmessage-listener-without-origin-check"
+    ],
+    "filename": "case.js",
+    "code": "window.addEventListener(\"message\",event=>{if(event.origin===\"https://trusted.test\"){document.body.innerHTML=event.data;}else{console.log(event.data);}});\n",
+    "expect": []
+  },
+  {
+    "name": "dart_stored_digest_guard",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,path);var hash=sha256.convert(await File(path).readAsBytes()).toString();if(hash==\"abc\"){await Process.run(path,[]);}}\n",
+    "expect": []
+  },
+  {
+    "name": "dart_unrelated_digest_guard",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,path);if(sha256.convert(await File(other).readAsBytes()).toString()==\"abc\"){await Process.run(path,[]);}}\n",
+    "expect": [
+      {
+        "id": "dart-downloaded-file-executed-without-verification",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "dart_write_after_digest",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,path);if(sha256.convert(await File(path).readAsBytes()).toString()==\"abc\"){await File(path).writeAsBytes(untrusted);await Process.run(path,[]);}}\n",
+    "expect": [
+      {
+        "id": "dart-downloaded-file-executed-without-verification",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "dart_redownload_after_digest",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,path);if(sha256.convert(await File(path).readAsBytes()).toString()==\"abc\"){await client.download(otherUrl,path);await Process.run(path,[]);}}\n",
+    "expect": [
+      {
+        "id": "dart-downloaded-file-executed-without-verification",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "dart_stored_digest_then_else",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,path);var hash=sha256.convert(await File(path).readAsBytes()).toString();if(hash==\"abc\"){await Process.run(path,[]);}else{print(\"reject\");}}\n",
+    "expect": []
+  },
+  {
+    "name": "dart_stored_digest_else_exec",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,path);var hash=sha256.convert(await File(path).readAsBytes()).toString();if(hash==\"abc\"){print(\"ok\");}else{await Process.run(path,[]);}}\n",
+    "expect": [
+      {
+        "id": "dart-downloaded-file-executed-without-verification",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "dart_literal_path",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,\"/tmp/tool\");await Process.run(\"/tmp/tool\",[]);}\n",
+    "expect": [
+      {
+        "id": "dart-downloaded-file-executed-without-verification",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "dart_constant_variable_path",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {const path=\"/tmp/tool\";await client.download(url,path);await Process.run(path,[]);}\n",
+    "expect": [
+      {
+        "id": "dart-downloaded-file-executed-without-verification",
+        "line": 1
+      }
+    ]
+  },
+  {
+    "name": "dart_literal_digest_guard",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,\"/tmp/tool\");if(sha256.convert(await File(\"/tmp/tool\").readAsBytes()).toString()==\"abc\"){await Process.run(\"/tmp/tool\",[]);}}\n",
+    "expect": []
+  },
+  {
+    "name": "dart_distinct_literal_path",
+    "pack": "xeria-rules",
+    "rule_file": "rules/dart/flutter-data.yaml",
+    "rule_ids": [
+      "dart-downloaded-file-executed-without-verification"
+    ],
+    "filename": "case.dart",
+    "code": "Future<void> update() async {await client.download(url,\"/tmp/tool\");await Process.run(\"/usr/bin/trusted\",[]);}\n",
+    "expect": []
+  }
+]

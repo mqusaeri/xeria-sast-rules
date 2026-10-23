@@ -1,0 +1,28 @@
+rules:
+- id: xeria-pyjwt-audience-check-disabled
+  languages:
+  - python
+  severity: WARNING
+  message: PyJWT secara eksplisit menonaktifkan verifikasi audience. Pastikan batas kepercayaan aplikasi
+    tetap membatasi token ke audience yang diharapkan melalui pemeriksaan yang setara sebelum memakai
+    claims untuk otorisasi. Decode untuk inspeksi atau validasi eksternal dapat sah; ini review trust
+    configuration, bukan bukti bypass otorisasi.
+  metadata:
+    judul: Validasi audience JWT dinonaktifkan
+    category: security
+    subcategory:
+    - audit
+    cwe: 'CWE-287: Improper Authentication'
+    owasp: A07:2025 - Authentication Failures
+    confidence: HIGH
+    likelihood: MEDIUM
+    impact: HIGH
+    technology:
+    - python
+    - pyjwt
+    references:
+    - https://pyjwt.readthedocs.io/en/stable/api.html#jwt.decode
+    tested-engine: OpenGrep 1.29.0
+    limitations: Pemeriksaan pola API eksplisit; kontrol di wrapper atau pipeline lain memerlukan penilaian
+      integrasi.
+  pattern: 'jwt.decode(..., options={..., "verify_aud": False, ...}, ...)'

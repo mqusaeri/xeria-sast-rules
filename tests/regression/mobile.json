@@ -1,0 +1,655 @@
+[
+  {
+    "name": "mobile-java-shell-array",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/injection/command_injection.yaml",
+    "rule_ids": [
+      "command_injection"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void run(String input) {\n  Runtime.getRuntime().exec(new String[] { \"sh\", \"-c\", input });\n} }\n",
+    "expect": [
+      {
+        "id": "command_injection",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-java-shell-path",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/injection/command_injection.yaml",
+    "rule_ids": [
+      "command_injection"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void run(String input) {\n  Runtime.getRuntime().exec(new String[] { \"/bin/bash\", \"-c\", input });\n} }\n",
+    "expect": [
+      {
+        "id": "command_injection",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-java-cmd-array",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/injection/command_injection.yaml",
+    "rule_ids": [
+      "command_injection"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void run(String input) {\n  Runtime.getRuntime().exec(new String[] { \"cmd.exe\", \"/c\", input });\n} }\n",
+    "expect": [
+      {
+        "id": "command_injection",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-java-fixed-argv",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/injection/command_injection.yaml",
+    "rule_ids": [
+      "command_injection"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void run(String input) {\n  Runtime.getRuntime().exec(new String[] { \"/usr/bin/printf\", \"%s\", input });\n} }\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-java-literal-shell",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/injection/command_injection.yaml",
+    "rule_ids": [
+      "command_injection"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void run(String input) {\n  Runtime.getRuntime().exec(new String[] { \"sh\", \"-c\", \"printf hello\" });\n} }\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-java-dynamic-command",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/injection/command_injection.yaml",
+    "rule_ids": [
+      "command_injection"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void run(String input) {\n  Runtime.getRuntime().exec(input);\n} }\n",
+    "expect": [
+      {
+        "id": "command_injection",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-kt-shell-array",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+    "rule_ids": [
+      "android_kotlin_command_injection"
+    ],
+    "filename": "Example.kt",
+    "code": "fun run(input: String) {\n  Runtime.getRuntime().exec(arrayOf(\"sh\", \"-c\", input))\n}\n",
+    "expect": [
+      {
+        "id": "android_kotlin_command_injection",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-kt-shell-path",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+    "rule_ids": [
+      "android_kotlin_command_injection"
+    ],
+    "filename": "Example.kt",
+    "code": "fun run(input: String) {\n  Runtime.getRuntime().exec(arrayOf(\"/bin/bash\", \"-c\", input))\n}\n",
+    "expect": [
+      {
+        "id": "android_kotlin_command_injection",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-kt-cmd-array",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+    "rule_ids": [
+      "android_kotlin_command_injection"
+    ],
+    "filename": "Example.kt",
+    "code": "fun run(input: String) {\n  Runtime.getRuntime().exec(arrayOf(\"cmd.exe\", \"/c\", input))\n}\n",
+    "expect": [
+      {
+        "id": "android_kotlin_command_injection",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-kt-fixed-argv",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+    "rule_ids": [
+      "android_kotlin_command_injection"
+    ],
+    "filename": "Example.kt",
+    "code": "fun run(input: String) {\n  Runtime.getRuntime().exec(arrayOf(\"/usr/bin/printf\", \"%s\", input))\n}\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-kt-literal-shell",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+    "rule_ids": [
+      "android_kotlin_command_injection"
+    ],
+    "filename": "Example.kt",
+    "code": "fun run(input: String) {\n  Runtime.getRuntime().exec(arrayOf(\"sh\", \"-c\", \"printf hello\"))\n}\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-kt-dynamic-command",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+    "rule_ids": [
+      "android_kotlin_command_injection"
+    ],
+    "filename": "Example.kt",
+    "code": "fun run(input: String) {\n  Runtime.getRuntime().exec(input)\n}\n",
+    "expect": [
+      {
+        "id": "android_kotlin_command_injection",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-java-default-trust",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/network/accept_self_signed.yaml",
+    "rule_ids": [
+      "accept_self_signed_certificate"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void run() {\n SSLContext ctx = SSLContext.getInstance(\"TLSv1.3\");\n ctx.init(null, null, new SecureRandom());\n} }\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-java-trust-all",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/network/accept_self_signed.yaml",
+    "rule_ids": [
+      "accept_self_signed_certificate"
+    ],
+    "filename": "Example.java",
+    "code": "class Trust implements X509TrustManager {\n public void checkServerTrusted(X509Certificate[] chain, String auth) { }\n}\n",
+    "expect": [
+      {
+        "id": "accept_self_signed_certificate",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-java-empty-issuers",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/network/accept_self_signed.yaml",
+    "rule_ids": [
+      "accept_self_signed_certificate"
+    ],
+    "filename": "Example.java",
+    "code": "class Trust implements X509TrustManager {\n public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }\n public void checkServerTrusted(X509Certificate[] chain, String auth) { delegate.checkServerTrusted(chain, auth); }\n}\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-java-verifier-true",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/network/accept_self_signed.yaml",
+    "rule_ids": [
+      "accept_self_signed_certificate"
+    ],
+    "filename": "Example.java",
+    "code": "class Verifier implements HostnameVerifier {\n public boolean verify(String host, SSLSession session) { return true; }\n}\n",
+    "expect": [
+      {
+        "id": "accept_self_signed_certificate",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-java-verifier-validating",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/network/accept_self_signed.yaml",
+    "rule_ids": [
+      "accept_self_signed_certificate"
+    ],
+    "filename": "Example.java",
+    "code": "class Verifier implements HostnameVerifier {\n public boolean verify(String host, SSLSession session) { if (!delegate.verify(host, session)) return false; return true; }\n}\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-kotlin-verifier-safe",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/network.yaml",
+    "rule_ids": [
+      "android_kotlin_insecure_ssl"
+    ],
+    "filename": "Example.kt",
+    "code": "fun configure(verifier: HostnameVerifier) {\n HttpsURLConnection.setDefaultHostnameVerifier(verifier)\n}\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-kotlin-verifier-true",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/network.yaml",
+    "rule_ids": [
+      "android_kotlin_insecure_ssl"
+    ],
+    "filename": "Example.kt",
+    "code": "fun configure() {\n HttpsURLConnection.setDefaultHostnameVerifier(HostnameVerifier { host, session -> true })\n}\n",
+    "expect": [
+      {
+        "id": "android_kotlin_insecure_ssl",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-kotlin-verifier-lambda",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/network.yaml",
+    "rule_ids": [
+      "android_kotlin_insecure_ssl"
+    ],
+    "filename": "Example.kt",
+    "code": "fun configure() {\n HttpsURLConnection.setDefaultHostnameVerifier { host, session -> true }\n}\n",
+    "expect": [
+      {
+        "id": "android_kotlin_insecure_ssl",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-kotlin-sql-bound",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+    "rule_ids": [
+      "android_kotlin_sql_raw_query"
+    ],
+    "filename": "Example.kt",
+    "code": "fun query(db: SQLiteDatabase, id: String) {\n db.rawQuery(\"SELECT name FROM users WHERE id = ?\", arrayOf(id))\n db.execSQL(\"UPDATE users SET name = ? WHERE id = ?\", arrayOf(\"name\", id))\n}\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-kotlin-sql-concat",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+    "rule_ids": [
+      "android_kotlin_sql_raw_query"
+    ],
+    "filename": "Example.kt",
+    "code": "fun query(db: SQLiteDatabase, id: String) {\n db.rawQuery(\"SELECT name FROM users WHERE id = \" + id, null)\n}\n",
+    "expect": [
+      {
+        "id": "android_kotlin_sql_raw_query",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-kotlin-sql-interpolation",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+    "rule_ids": [
+      "android_kotlin_sql_raw_query"
+    ],
+    "filename": "Example.kt",
+    "code": "fun query(db: SQLiteDatabase, id: String) {\n db.rawQuery(\"SELECT name FROM users WHERE id = $id\", null)\n}\n",
+    "expect": [
+      {
+        "id": "android_kotlin_sql_raw_query",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-java-sql-bound",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/injection/sqlite_injection.yaml",
+    "rule_ids": [
+      "sqlite_injection"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void query(SQLiteDatabase db, String id) {\n db.rawQuery(\"SELECT name FROM users WHERE id = ?\", new String[]{id});\n} }\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-java-sql-concat",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/injection/sqlite_injection.yaml",
+    "rule_ids": [
+      "sqlite_injection"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void query(SQLiteDatabase db, String id) {\n db.rawQuery(\"SELECT name FROM users WHERE id = \" + id + \";\", null);\n} }\n",
+    "expect": [
+      {
+        "id": "sqlite_injection",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-java-hidden-info",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/android/hidden_ui.yaml",
+    "rule_ids": [
+      "android_hidden_ui"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void render(View spinner) {\n spinner.setVisibility(View.GONE);\n} }\n",
+    "expect": [
+      {
+        "id": "android_hidden_ui",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-kotlin-hidden-info",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/android.yaml",
+    "rule_ids": [
+      "android_kotlin_hiddenui"
+    ],
+    "filename": "Example.kt",
+    "code": "fun render(spinner: View) {\n spinner.visibility = View.GONE\n}\n",
+    "expect": [
+      {
+        "id": "android_kotlin_hiddenui",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-swift-tls-old",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/swift/network.yaml",
+    "rule_ids": [
+      "ios_tls3_not_used"
+    ],
+    "filename": "Example.swift",
+    "code": "let config = URLSessionConfiguration.default\nconfig.tlsMinimumSupportedProtocolVersion = .TLSv10\nconfig.tlsMinimumSupportedProtocolVersion = tls_protocol_version_t.TLSv11\n",
+    "expect": [
+      {
+        "id": "ios_tls3_not_used",
+        "line": 2
+      },
+      {
+        "id": "ios_tls3_not_used",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "mobile-swift-tls-modern",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/swift/network.yaml",
+    "rule_ids": [
+      "ios_tls3_not_used"
+    ],
+    "filename": "Example.swift",
+    "code": "let config = URLSessionConfiguration.default\nconfig.tlsMinimumSupportedProtocolVersion = .TLSv12\nconfig.tlsMinimumSupportedProtocolVersion = .TLSv13\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-swift-tls12-policy",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/swift/network.yaml",
+    "rule_ids": [
+      "ios_tls12_used"
+    ],
+    "filename": "Example.swift",
+    "code": "let config = URLSessionConfiguration.default\nconfig.tlsMinimumSupportedProtocolVersion = .TLSv12\n",
+    "expect": [
+      {
+        "id": "ios_tls12_used",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-swift-dtls-old",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/swift/network.yaml",
+    "rule_ids": [
+      "ios_dtls1_used"
+    ],
+    "filename": "Example.swift",
+    "code": "let config = URLSessionConfiguration.default\nconfig.tlsMinimumSupportedProtocolVersion = .DTLSv10\n",
+    "expect": [
+      {
+        "id": "ios_dtls1_used",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-swift-tls-comment",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/swift/network.yaml",
+    "rule_ids": [
+      "ios_tls3_not_used"
+    ],
+    "filename": "Example.swift",
+    "code": "// config.tlsMinimumSupportedProtocolVersion = .TLSv10\nlet config = URLSessionConfiguration.default\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-swift-rng-system",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/swift/crypto.yaml",
+    "rule_ids": [
+      "ios_insecure_random_no_generator"
+    ],
+    "filename": "Example.swift",
+    "code": "var generator = SystemRandomNumberGenerator()\nlet a = Int.random(in: 0...100)\nlet b = Int.random(in: 0...100, using: &generator)\nlet c = arc4random()\nlet d = arc4random_uniform(100)\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-swift-rng-predictable",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/swift/crypto.yaml",
+    "rule_ids": [
+      "ios_insecure_random_no_generator"
+    ],
+    "filename": "Example.swift",
+    "code": "let a = rand()\nlet b = Darwin.random()\nlet c = drand48()\n",
+    "expect": [
+      {
+        "id": "ios_insecure_random_no_generator",
+        "line": 1
+      },
+      {
+        "id": "ios_insecure_random_no_generator",
+        "line": 2
+      },
+      {
+        "id": "ios_insecure_random_no_generator",
+        "line": 3
+      }
+    ]
+  },
+  {
+    "name": "mobile-swift-rng-comments",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/swift/crypto.yaml",
+    "rule_ids": [
+      "ios_insecure_random_no_generator"
+    ],
+    "filename": "Example.swift",
+    "code": "// rand() and random() are not suitable for keys.\nlet sample = \"random()\"\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-swift-clipboard-modern",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/swift/storage.yaml",
+    "rule_ids": [
+      "ios_general_paste"
+    ],
+    "filename": "Example.swift",
+    "code": "func copy(password: String) {\n UIPasteboard.general.string = password\n}\n",
+    "expect": [
+      {
+        "id": "ios_general_paste",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-swift-clipboard-named",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/swift/storage.yaml",
+    "rule_ids": [
+      "ios_general_paste"
+    ],
+    "filename": "Example.swift",
+    "code": "func copy(password: String) {\n let pasteboard = UIPasteboard(name: UIPasteboard.Name(\"local\"), create: true)\n pasteboard?.string = password\n}\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-java-xxe-unconfigured",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/xxe/xmlfactory_xxe.yaml",
+    "rule_ids": [
+      "xmlinputfactory_xxe"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void parse() {\n XMLInputFactory factory = XMLInputFactory.newFactory();\n} }\n",
+    "expect": [
+      {
+        "id": "xmlinputfactory_xxe",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-java-xxe-disabled-constant",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/xxe/xmlfactory_xxe.yaml",
+    "rule_ids": [
+      "xmlinputfactory_xxe"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void parse() {\n XMLInputFactory factory = XMLInputFactory.newFactory();\n factory.setProperty(javax.xml.stream.XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);\n} }\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-java-xxe-unrelated-factory",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/xxe/xmlfactory_xxe.yaml",
+    "rule_ids": [
+      "xmlinputfactory_xxe"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void parse() {\n Widget factory = Widget.newFactory();\n} }\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-java-xxe-enabled-constant",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/xxe/xmlfactory_external_entities_enabled.yaml",
+    "rule_ids": [
+      "xmlinputfactory_xxe_enabled"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void parse(XMLInputFactory factory) {\n factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, true);\n} }\n",
+    "expect": [
+      {
+        "id": "xmlinputfactory_xxe_enabled",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-kotlin-xxe-enabled-constant",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/injection.yaml",
+    "rule_ids": [
+      "android_kotlin_xmlinputfactory_xxe_enabled"
+    ],
+    "filename": "Example.kt",
+    "code": "fun parse(factory: XMLInputFactory) {\n factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, true)\n}\n",
+    "expect": [
+      {
+        "id": "android_kotlin_xmlinputfactory_xxe_enabled",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-java-cipher-cbc",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/crypto/cbc_padding_oracle.yaml",
+    "rule_ids": [
+      "cbc_padding_oracle"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void cipher() {\n Cipher.getInstance(\"AES/CBC/PKCS5Padding\");\n} }\n",
+    "expect": [
+      {
+        "id": "cbc_padding_oracle",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-java-cipher-gcm",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/java/crypto/cbc_padding_oracle.yaml",
+    "rule_ids": [
+      "cbc_padding_oracle"
+    ],
+    "filename": "Example.java",
+    "code": "class Example { void cipher() {\n Cipher.getInstance(\"AES/GCM/NoPadding\");\n} }\n",
+    "expect": []
+  },
+  {
+    "name": "mobile-kt-cipher-cbc",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/crypto.yaml",
+    "rule_ids": [
+      "cbc_kotlin_padding_oracle"
+    ],
+    "filename": "Example.kt",
+    "code": "fun cipher() {\n Cipher.getInstance(\"AES/CBC/PKCS5Padding\")\n}\n",
+    "expect": [
+      {
+        "id": "cbc_kotlin_padding_oracle",
+        "line": 2
+      }
+    ]
+  },
+  {
+    "name": "mobile-kt-cipher-gcm",
+    "pack": "mobsfscan-rules",
+    "rule_file": "rules/mobsfscan/rules/semgrep/kotlin/crypto.yaml",
+    "rule_ids": [
+      "cbc_kotlin_padding_oracle"
+    ],
+    "filename": "Example.kt",
+    "code": "fun cipher() {\n Cipher.getInstance(\"AES/GCM/NoPadding\")\n}\n",
+    "expect": []
+  }
+]

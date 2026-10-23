@@ -1,0 +1,28 @@
+rules:
+- id: claude-settings-bypass-permissions-generic
+  languages:
+  - json
+  severity: WARNING
+  message: Claude Code settings explicitly bypass permission prompts or weaken sandbox restrictions. Review
+    whether this is intended for this trusted environment; use default permissions and sandbox enforcement
+    for untrusted repositories and tool output. A disabled boolean or explanatory text is not a bypass.
+  metadata:
+    cwe: 'CWE-862: Missing Authorization'
+    category: security
+    confidence: HIGH
+    subcategory:
+    - audit
+    likelihood: HIGH
+    impact: MEDIUM
+    technology:
+    - claude-code
+    references:
+    - https://docs.anthropic.com/en/docs/claude-code/security
+  paths:
+    include:
+    - '**/.claude/settings.json'
+    - '**/.claude/settings.local.json'
+  pattern-either:
+  - pattern: '{"permissions": {"defaultMode": "bypassPermissions", ...}, ...}'
+  - pattern: '{"sandbox": {"allowUnsandboxedCommands": true, ...}, ...}'
+  - pattern: '{"sandbox": {"enableWeakerNestedSandbox": true, ...}, ...}'

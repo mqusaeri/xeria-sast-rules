@@ -1,0 +1,365 @@
+# Konfigurasi infrastruktur: Docker Compose, Traefik, dan aplikasi OIDC.
+#
+# Compose menggunakan pola YAML per service/binding; Traefik dan konfigurasi
+# lintas format menggunakan pola teks yang dibatasi konteks.
+rules:
+  - id: compose-database-port-exposed
+    languages:
+    - yaml
+    paths:
+      include:
+      - '*docker-compose*.yml'
+      - '*docker-compose*.yaml'
+      - '*compose*.yml'
+      - '*compose*.yaml'
+      exclude:
+      - '*compose*dev*'
+      - '*dev*compose*'
+      - '*compose*local*'
+      - '*compose*test*'
+    severity: ERROR
+    message: 'Port basis data, cache, atau antarmuka admin dipublikasikan ke semua antarmuka jaringan host
+      (tanpa awalan 127.0.0.1). Bila firewall host tidak menutupnya, layanan ini dapat dijangkau dari luar
+      dan menjadi sasaran brute force atau eksploitasi langsung. Hapus pemetaan port, atau ikat ke loopback:
+      "127.0.0.1:3306:3306".'
+    metadata:
+      judul: Port basis data atau admin terbuka ke semua antarmuka (Compose)
+      category: security
+      subcategory:
+      - vuln
+      cwe: 'CWE-668: Exposure of Resource to Wrong Sphere'
+      owasp: A05:2021 - Security Misconfiguration
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology:
+      - docker-compose
+      - docker
+      - mysql
+      - postgres
+      - redis
+      references:
+      - https://docs.docker.com/engine/network/packet-filtering-firewalls/
+    pattern-either:
+    - pattern-regex: (?m)^[ \t]*-\s*["']?(?:0\.0\.0\.0:)?\d{2,5}:(3306|5432|6379|27017|27018|9200|9300|11211|1433|1521|5984|8086|9042|2379|5672|15672|6333|8123|7474|7687|26257)(/tcp)?["']?\s*(#.*)?$
+    - patterns:
+      - pattern-inside: "ports:\n  - ...\n"
+      - pattern: 'target: $PORT
+
+          published: $PUBLISHED
+
+          ...
+
+          '
+      - metavariable-regex:
+          metavariable: $PORT
+          regex: ^(3306|5432|6379|27017|27018|9200|9300|11211|1433|1521|5984|8086|9042|2379|5672|15672|6333|8123|7474|7687|26257)$
+      - pattern-either:
+        - patterns:
+          - pattern: 'target: $PORT
+
+              ...
+
+              '
+          - pattern-not-inside: 'host_ip: $HOST
+
+              ...
+
+              '
+        - pattern-inside: 'host_ip: "0.0.0.0"
+
+            ...
+
+            '
+        - pattern-inside: 'host_ip: "::"
+
+            ...
+
+            '
+      - focus-metavariable: $PORT
+
+  - id: compose-database-port-exposed-dev
+    languages:
+    - yaml
+    paths:
+      include:
+      - '*compose*dev*.yml'
+      - '*compose*dev*.yaml'
+      - '*dev*compose*.yml'
+      - '*dev*compose*.yaml'
+      - '*compose*local*.yml'
+      - '*compose*local*.yaml'
+      - '*compose*test*.yml'
+      - '*compose*test*.yaml'
+    severity: INFO
+    message: Berkas compose pengembangan memublikasikan port basis data atau antrian ke semua antarmuka
+      jaringan. Di laptop pengembang risikonya kecil; bila stack ini dijalankan di server bersama atau VPS,
+      layanan tersebut dapat dijangkau dari luar. Ikat ke loopback ("127.0.0.1:5432:5432") dan pastikan
+      berkas ini tidak dipakai untuk deployment.
+    metadata:
+      judul: Port basis data terbuka di compose pengembangan
+      category: security
+      subcategory:
+      - audit
+      cwe: 'CWE-668: Exposure of Resource to Wrong Sphere'
+      owasp: A05:2021 - Security Misconfiguration
+      confidence: MEDIUM
+      likelihood: LOW
+      impact: MEDIUM
+      technology:
+      - docker-compose
+      - docker
+      - mysql
+      - postgres
+      - redis
+      references:
+      - https://docs.docker.com/engine/network/packet-filtering-firewalls/
+    pattern-either:
+    - pattern-regex: (?m)^[ \t]*-\s*["']?(?:0\.0\.0\.0:)?\d{2,5}:(3306|5432|6379|27017|27018|9200|9300|11211|1433|1521|5984|8086|9042|2379|5672|15672|6333|8123|7474|7687|26257)(/tcp)?["']?\s*(#.*)?$
+    - patterns:
+      - pattern-inside: "ports:\n  - ...\n"
+      - pattern: 'target: $PORT
+
+          published: $PUBLISHED
+
+          ...
+
+          '
+      - metavariable-regex:
+          metavariable: $PORT
+          regex: ^(3306|5432|6379|27017|27018|9200|9300|11211|1433|1521|5984|8086|9042|2379|5672|15672|6333|8123|7474|7687|26257)$
+      - pattern-either:
+        - patterns:
+          - pattern: 'target: $PORT
+
+              ...
+
+              '
+          - pattern-not-inside: 'host_ip: $HOST
+
+              ...
+
+              '
+        - pattern-inside: 'host_ip: "0.0.0.0"
+
+            ...
+
+            '
+        - pattern-inside: 'host_ip: "::"
+
+            ...
+
+            '
+      - focus-metavariable: $PORT
+
+  - id: compose-docker-socket-mounted
+    languages:
+    - yaml
+    paths:
+      include:
+      - '*docker-compose*.yml'
+      - '*docker-compose*.yaml'
+      - '*compose*.yml'
+      - '*compose*.yaml'
+    severity: WARNING
+    message: Socket Docker dipasang ke dalam container. Proses di container itu — termasuk penyerang yang
+      berhasil masuk — dapat mengendalikan daemon Docker dan memperoleh akses root ke host, bahkan bila
+      dipasang read-only. Hindari memasang docker.sock; bila perlu, gunakan proxy socket yang membatasi
+      API.
+    metadata:
+      judul: Socket Docker dipasang ke dalam container
+      category: security
+      subcategory:
+      - vuln
+      cwe: 'CWE-250: Execution with Unnecessary Privileges'
+      owasp: A05:2021 - Security Misconfiguration
+      confidence: HIGH
+      likelihood: LOW
+      impact: HIGH
+      technology:
+      - docker-compose
+      - docker
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-1-do-not-expose-the-docker-daemon-socket-even-to-the-containers
+    pattern-either:
+    - pattern-regex: (?m)^[ \t]*-\s*["']?[^#\n]*docker\.sock
+    - patterns:
+      - pattern-inside: "volumes:\n  - ...\n"
+      - pattern: 'type: bind
+
+          source: $SOURCE
+
+          ...
+
+          '
+      - metavariable-regex:
+          metavariable: $SOURCE
+          regex: (^|.*/)docker\.sock$
+      - focus-metavariable: $SOURCE
+
+  - id: compose-privileged-or-host-namespace
+    languages: [generic]
+    paths:
+      include: ["*docker-compose*.yml", "*docker-compose*.yaml", "*compose*.yml", "*compose*.yaml"]
+    severity: ERROR
+    message: >-
+      Container dijalankan privileged atau berbagi namespace jaringan/proses
+      host. Pembatas antara container dan host praktis hilang: celah di aplikasi
+      dalam container menjadi akses ke host. Hapus privileged, network_mode:
+      host, dan pid: host kecuali benar-benar dibutuhkan.
+    pattern-either:
+      - pattern-regex: (?m)^[ \t]*privileged:\s*true\b
+      - pattern-regex: (?m)^[ \t]*network_mode:\s*["']?host["']?\s*$
+      - pattern-regex: (?m)^[ \t]*pid:\s*["']?host["']?\s*$
+    metadata:
+      judul: "Container privileged atau berbagi namespace host"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-250: Execution with Unnecessary Privileges"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: LOW
+      impact: HIGH
+      technology: [docker-compose, docker]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html
+
+  - id: compose-default-secret-fallback
+    languages: [generic]
+    paths:
+      include: ["*docker-compose*.yml", "*docker-compose*.yaml", "*compose*.yml", "*compose*.yaml"]
+    severity: ERROR
+    message: >-
+      Variabel rahasia memiliki nilai cadangan yang tertulis di berkas compose
+      (${PASSWORD:-nilai}). Bila .env produksi lupa mengisinya, layanan berjalan
+      dengan password atau secret yang diketahui siapa pun yang membaca
+      repositori. Gunakan ${NAMA:?pesan} agar compose menolak berjalan tanpa
+      nilai.
+    # Nama variabel memuat PASSWORD/SECRET/TOKEN/KEY sebagai satu segmen
+    # (bukan TLS_PASSTHROUGH), bukan pengaturan pendamping (…_FILE, …_TTL),
+    # dan nilai cadangannya literal — bukan ${VARIABEL_LAIN}.
+    pattern-regex: '\$\{(?![A-Z0-9_]*_(FILE|TTL|EXPIRY|EXPIRES|EXPIRE|LIFETIME|TIMEOUT|LENGTH|MIN_LENGTH|URL|URI|HOST|PORT|PATH|ALGORITHM|ALG|ISSUER|AUDIENCE|NAME|USER|USERNAME|ENABLED|TYPE|HEADER|COOKIE|ROTATION)\s*:?-)(?:[A-Z0-9]+_)*(PASS|PASSWORD|PASSWD|PWD|SECRET|TOKEN|APIKEY|API_KEY|PRIVATE_KEY|ACCESS_KEY|SECRET_KEY|MASTERKEY|MASTER_KEY|ENCRYPTION_KEY|SIGNING_KEY)(?:_[A-Z0-9]+)*:?-(?!\$)[^}\s]+\}'
+    metadata:
+      judul: "Variabel rahasia punya nilai cadangan di berkas compose"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-1188: Initialization of a Resource with an Insecure Default"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [docker-compose, docker]
+      references:
+        - https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/
+
+  - id: traefik-api-insecure
+    languages:
+    - generic
+    paths:
+      include:
+      - '*traefik*.yml'
+      - '*traefik*.yaml'
+      - '*traefik*.toml'
+      - '*docker-compose*.yml'
+      - '*docker-compose*.yaml'
+      - '*compose*.yml'
+      - '*compose*.yaml'
+    severity: ERROR
+    message: 'API dan dashboard Traefik diaktifkan dalam mode insecure: tersedia tanpa autentikasi di entrypoint
+      tersendiri. Siapa pun yang menjangkau port itu dapat melihat seluruh router, service, dan alamat container
+      internal. Matikan insecure, lalu publikasikan dashboard lewat router dengan middleware autentikasi
+      dan pembatasan IP.'
+    pattern-either:
+    - pattern-regex: (?m)^api:[ \t]*\n(?:[ \t]+.*\n|[ \t]*\n)*?[ \t]+insecure:\s*true\b
+    - pattern-regex: (?m)^[^#\n]*?--api\.insecure(?:=true)?(?=[\s"\x27,\]]|$)
+    - pattern-regex: (?m)^\[api\][ \t]*\n(?:(?!\[).*\n)*?[ \t]*insecure\s*=\s*true\b
+    metadata:
+      judul: API dan dashboard Traefik terbuka tanpa autentikasi
+      category: security
+      subcategory:
+      - vuln
+      cwe: 'CWE-306: Missing Authentication for Critical Function'
+      owasp: A05:2021 - Security Misconfiguration
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology:
+      - traefik
+      references:
+      - https://doc.traefik.io/traefik/operations/api/#insecure
+
+  - id: oidc-application-dev-mode
+    languages: [generic]
+    paths:
+      include: ["*.yml", "*.yaml", "*.json"]
+    severity: WARNING
+    message: >-
+      Aplikasi OIDC (misalnya Zitadel) dikonfigurasi dengan devMode: true.
+      Mode pengembangan melonggarkan validasi redirect URI dan mengizinkan
+      http://, sehingga kode otorisasi atau token dapat dialihkan ke alamat yang
+      tidak semestinya. Matikan devMode di lingkungan produksi.
+    pattern-regex: (?m)^[ \t]*"?devMode"?\s*:\s*true\b
+    metadata:
+      judul: "Aplikasi OIDC berjalan dalam devMode"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-346: Origin Validation Error"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [zitadel, oidc]
+      references:
+        - https://zitadel.com/docs/guides/manage/console/applications
+
+  - id: compose-no-resource-limits
+    languages:
+    - yaml
+    paths:
+      include:
+      - '*docker-compose*.yml'
+      - '*docker-compose*.yaml'
+      - '*compose*.yml'
+      - '*compose*.yaml'
+    severity: INFO
+    message: Service Compose ini tidak mendeklarasikan batas CPU atau memori yang dikenali (cpus, mem_limit,
+      deploy.resources.limits). Batas pada service lain atau reservation saja tidak membatasi service ini.
+      Tinjau kapasitas dan kontrol global sebelum menetapkan limits.
+    patterns:
+    - pattern-inside: "services:\n  ...\n"
+    - pattern-either:
+      - pattern: 'image: $IMAGE'
+      - patterns:
+        - pattern: 'build: $BUILD'
+        - pattern-not-inside: 'image: $IMAGE
+
+            ...
+
+            '
+    - pattern-not-inside: 'mem_limit: $LIMIT
+
+        ...
+
+        '
+    - pattern-not-inside: 'cpus: $LIMIT
+
+        ...
+
+        '
+    - pattern-not-inside: "deploy:\n  resources:\n    limits:\n      memory: $LIMIT\n...\n"
+    - pattern-not-inside: "deploy:\n  resources:\n    limits:\n      cpus: $LIMIT\n...\n"
+    metadata:
+      judul: Service compose tanpa batas CPU dan memori
+      category: security
+      subcategory:
+      - audit
+      cwe: 'CWE-770: Allocation of Resources Without Limits or Throttling'
+      owasp: A05:2021 - Security Misconfiguration
+      confidence: MEDIUM
+      likelihood: LOW
+      impact: MEDIUM
+      technology:
+      - docker-compose
+      - docker
+      references:
+      - https://docs.docker.com/reference/compose-file/deploy/#resources

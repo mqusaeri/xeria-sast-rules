@@ -1,0 +1,38 @@
+rules:
+- id: xeria-tarfile-fully-trusted-extraction
+  languages:
+  - python
+  severity: WARNING
+  message: Ekstraksi tar secara eksplisit memilih filter fully_trusted, sehingga perlindungan containment
+    dari filter data tidak diterapkan. Gunakan filter="data" untuk arsip tidak tepercaya dan tambahkan
+    batas resource. Arsip internal yang provenance-nya diverifikasi dapat menjadi penggunaan sah; ini
+    review konfigurasi ekstraksi.
+  metadata:
+    judul: Filter proteksi ekstraksi tar dinonaktifkan
+    category: security
+    subcategory:
+    - audit
+    cwe: 'CWE-22: Improper Limitation of a Pathname to a Restricted Directory'
+    owasp: A02:2025 - Security Misconfiguration
+    confidence: HIGH
+    likelihood: MEDIUM
+    impact: HIGH
+    technology:
+    - python
+    - tarfile
+    references:
+    - https://docs.python.org/3/library/tarfile.html#extraction-filters
+    tested-engine: OpenGrep 1.29.0
+    limitations: Pemeriksaan pola API eksplisit; kontrol di wrapper atau pipeline lain memerlukan penilaian
+      integrasi.
+  patterns:
+  - pattern-either:
+    - pattern-inside: '$ARCHIVE = tarfile.open(...)
+
+        ...'
+    - pattern-inside: "with tarfile.open(...) as $ARCHIVE:\n    ..."
+  - pattern-either:
+    - pattern: $ARCHIVE.extractall(..., filter="fully_trusted", ...)
+    - pattern: $ARCHIVE.extract(..., filter="fully_trusted", ...)
+    - pattern: $ARCHIVE.extractall(..., filter=tarfile.fully_trusted_filter, ...)
+    - pattern: $ARCHIVE.extract(..., filter=tarfile.fully_trusted_filter, ...)

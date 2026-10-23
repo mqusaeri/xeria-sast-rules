@@ -1,0 +1,58 @@
+rules:
+- id: uv-missing-dependency-cooldown
+  pattern-either:
+  - patterns:
+    - pattern-regex: (?ms)^[ \t]*\[tool\.uv\][^\r\n]*(?:\r?\n|\z)(?P<TARGET>.*?)(?=^[ \t]*\[|\z)
+    - metavariable-regex:
+        metavariable: $TARGET
+        regex: (?ms)^(?!.*^[ \t]*exclude-newer[ \t]*=)
+    - focus-metavariable: $TARGET
+  - patterns:
+    - pattern-regex: (?s)\A(?P<TARGET>.+)\z
+    - pattern-not-regex: (?m)^[ \t]*\[(?:project(?:\.|\])|build-system\]|tool(?:\.|\]))
+    - pattern-not-regex: (?ms)\A(?:(?!^[ \t]*\[)[\s\S])*?^[ \t]*exclude-newer[ \t]*=
+    - focus-metavariable: $TARGET
+  - patterns:
+    - pattern-regex: (?ms)^[ \t]*\[tool\.uv\][^\r\n]*(?:\r?\n|\z)(?P<TARGET>.*?)(?=^[ \t]*\[|\z)
+    - pattern-regex: (?m)^[ \t]*exclude-newer[ \t]*=[ \t]*["'](?P<VAL>[^"'\r\n]*)["']
+    - metavariable-regex:
+        metavariable: $VAL
+        regex: (?i)^(?!(?:(?:[7-9]|[1-9]\d+)\s*d(?:ays?)?|[1-9]\d*\s*(?:weeks?|wks?|w|months?|mos?|mo|years?|yrs?|y)|P(?:[7-9]|[1-9]\d+)D|P[1-9]\d*[WMY])$)
+    - focus-metavariable: $VAL
+  - patterns:
+    - pattern-regex: (?ms)\A(?:(?!^[ \t]*\[)[\s\S])*
+    - pattern-regex: (?m)^[ \t]*exclude-newer[ \t]*=[ \t]*["'](?P<VAL>[^"'\r\n]*)["']
+    - metavariable-regex:
+        metavariable: $VAL
+        regex: (?i)^(?!(?:(?:[7-9]|[1-9]\d+)\s*d(?:ays?)?|[1-9]\d*\s*(?:weeks?|wks?|w|months?|mos?|mo|years?|yrs?|y)|P(?:[7-9]|[1-9]\d+)D|P[1-9]\d*[WMY])$)
+    - focus-metavariable: $VAL
+  message: 'Review dependency cooldown: this uv configuration is missing a recognized ongoing cooldown of at
+    least seven days, or sets an insufficient/unsupported value. In pyproject.toml use [tool.uv]; in uv.toml
+    use the root exclude-newer key. A fixed timestamp is a reproducibility policy, not an ongoing cooldown.
+    Project/global/CLI overrides require review. Supported uv versions must be checked before enabling this
+    policy.'
+  languages:
+  - generic
+  severity: MEDIUM
+  paths:
+    include:
+    - '**/pyproject.toml'
+    - '**/uv.toml'
+  metadata:
+    category: security
+    technology:
+    - uv
+    - python
+    cwe:
+    - 'CWE-829: Inclusion of Functionality from Untrusted Control Sphere'
+    owasp:
+    - A08:2021 - Software and Data Integrity Failures
+    confidence: MEDIUM
+    likelihood: LOW
+    impact: HIGH
+    subcategory:
+    - audit
+    vulnerability_class:
+    - Insecure Configuration
+    references:
+    - https://docs.astral.sh/uv/concepts/resolution/#dependency-cooldowns

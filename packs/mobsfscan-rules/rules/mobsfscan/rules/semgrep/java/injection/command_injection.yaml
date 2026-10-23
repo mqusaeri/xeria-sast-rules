@@ -1,0 +1,28 @@
+rules:
+- id: command_injection
+  message: A dynamic command is passed to Runtime.exec or to a shell interpreter. If the command is untrusted,
+    it can execute attacker-controlled commands. Prefer a fixed executable with separate arguments and
+    validate the operation.
+  languages:
+  - java
+  severity: ERROR
+  metadata:
+    cwe: cwe-78
+    owasp-mobile: m7
+    masvs: platform-2
+    reference: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x04h-Testing-Code-Quality.md#injection-flaws-mstg-arch-2-and-mstg-platform-2
+    confidence: MEDIUM
+  pattern-either:
+  - patterns:
+    - pattern: Runtime.getRuntime().exec($CMD, ...)
+    - pattern-not: Runtime.getRuntime().exec("...", ...)
+    - pattern-not: Runtime.getRuntime().exec(new String[] { ... }, ...)
+  - patterns:
+    - pattern: Runtime.getRuntime().exec(new String[] { $SHELL, $FLAG, $CMD, ... }, ...)
+    - metavariable-regex:
+        metavariable: $SHELL
+        regex: ^(?:["\']?)(?:/(?:[^/"\']+/)*)?(?:sh|bash|ksh|csh|tcsh|zsh|cmd(?:\.exe)?|powershell(?:\.exe)?|pwsh)(?:["\']?)$
+    - metavariable-regex:
+        metavariable: $FLAG
+        regex: ^["\']?(?:-c|/c|-Command)["\']?$
+    - pattern-not: Runtime.getRuntime().exec(new String[] { $SHELL, $FLAG, "...", ... }, ...)

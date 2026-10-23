@@ -1,0 +1,166 @@
+# Konfigurasi dan alur login aplikasi web Python (Flask, Django, Superset).
+rules:
+  - id: python-secret-insecure-default
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Secret aplikasi memiliki nilai cadangan yang tertulis di kode
+      (os.getenv("SECRET_KEY", "nilai")). Bila variabel lingkungannya lupa diisi,
+      sesi dan token ditandatangani dengan secret yang diketahui publik sehingga
+      dapat dipalsukan. Hapus nilai cadangan dan hentikan aplikasi bila secret
+      tidak diisi.
+    patterns:
+      - pattern-either:
+          - pattern: $NAME = os.getenv("$VAR", "$DEFAULT")
+          - pattern: $NAME = os.environ.get("$VAR", "$DEFAULT")
+          - pattern: $NAME = "$DEFAULT"
+      - metavariable-regex:
+          metavariable: $NAME
+          regex: 
+            ^(SECRET_KEY|JWT_SECRET_KEY|JWT_SECRET|SESSION_SECRET|WTF_CSRF_SECRET_KEY|GUEST_TOKEN_JWT_SECRET|SIGNING_KEY)$
+      - metavariable-regex:
+          metavariable: $DEFAULT
+          regex: ^.{1,}$
+    metadata:
+      judul: "Secret aplikasi punya nilai cadangan di kode (Python)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-1188: Initialization of a Resource with an Insecure Default"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [flask, django, superset, python]
+      references:
+        - https://flask.palletsprojects.com/en/stable/config/#SECRET_KEY
+
+  - id: flask-open-redirect
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Input request mencapai redirect tanpa validasi tujuan yang dikenali. Gunakan url_for untuk route internal,
+      atau pemeriksaan url_has_allowed_host_and_scheme pada nilai URL yang sama dengan allowlist host tepercaya
+      dan require_https=True. Keberadaan fungsi bernama is_safe_url atau validasi nilai lain tidak membuktikan tujuan
+      ini aman; wrapper khusus perlu ditinjau terpisah.
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: request.args.get(...)
+          - pattern: request.args[...]
+          - pattern: request.form.get(...)
+          - pattern: request.form[...]
+          - pattern: request.values.get(...)
+          - pattern: request.GET.get(...)
+          - pattern: request.POST.get(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: redirect($URL, ...)
+              - pattern: HttpResponseRedirect($URL)
+          - focus-metavariable: $URL
+    pattern-sanitizers:
+      - pattern: url_for(...)
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  if url_has_allowed_host_and_scheme($URL, allowed_hosts={"$HOST"}, require_https=True):
+                      $...BODY
+              - pattern-inside: |
+                  if url_has_allowed_host_and_scheme($URL, allowed_hosts=["$HOST"], require_https=True):
+                      $...BODY
+              - pattern-inside: |
+                  if django.utils.http.url_has_allowed_host_and_scheme($URL, allowed_hosts={"$HOST"}, require_https=True):
+                      $...BODY
+          - focus-metavariable: $...BODY
+          - pattern-not-inside: |
+              if url_has_allowed_host_and_scheme($URL, ...):
+                  ...
+                  $URL = $NEW
+                  ...
+          - pattern-not-inside: |
+              if url_has_allowed_host_and_scheme($URL, ...):
+                  ...
+                  $URL += $NEW
+                  ...
+          - pattern-not-inside: |
+              if django.utils.http.url_has_allowed_host_and_scheme($URL, ...):
+                  ...
+                  $URL = $NEW
+                  ...
+          - pattern-not-inside: |
+              if django.utils.http.url_has_allowed_host_and_scheme($URL, ...):
+                  ...
+                  $URL += $NEW
+                  ...
+          - pattern: $URL
+    metadata:
+      judul: "Open redirect dari parameter request (Flask)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-601: URL Redirection to Untrusted Site"
+      owasp: "A01:2021 - Broken Access Control"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [flask, django, superset, python]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html
+
+  - id: python-session-cookie-not-secure
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Cookie sesi dikonfigurasi tanpa atribut Secure, sehingga ikut terkirim
+      lewat HTTP biasa dan dapat disadap di jaringan. Aktifkan
+      SESSION_COOKIE_SECURE (atau session_cookie_secure pada Talisman) di
+      produksi.
+    pattern-either:
+      - pattern: SESSION_COOKIE_SECURE = False
+      - pattern: CSRF_COOKIE_SECURE = False
+      - pattern: REMEMBER_COOKIE_SECURE = False
+      - patterns:
+          - pattern: '{..., "session_cookie_secure": $V, ...}'
+          - focus-metavariable: $V
+          - pattern: 'False'
+    metadata:
+      judul: "Cookie sesi tanpa atribut Secure (Python)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-614: Sensitive Cookie in HTTPS Session Without Secure Attribute"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [flask, django, superset, python]
+      references:
+        - https://flask.palletsprojects.com/en/stable/security/#set-cookie-options
+
+  - id: python-jwt-long-expiration
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Token JWT diberi masa berlaku lebih dari 30 hari. Token yang bocor —
+      dari log, riwayat browser, atau perangkat yang hilang — tetap dapat
+      dipakai selama itu, dan JWT tidak dapat dicabut tanpa daftar hitam.
+      Pakai access token berumur pendek (menit–jam) dengan refresh token yang
+      dapat dicabut.
+    # Pola SISFOREN Litbang: "exp": date_utc + timedelta(days=100).
+    patterns:
+      - pattern-either:
+          - pattern: '{..., "exp": $BASE + timedelta(days=$N), ...}'
+          - pattern: '$PAYLOAD["exp"] = $BASE + timedelta(days=$N)'
+      - metavariable-comparison:
+          metavariable: $N
+          comparison: $N > 30
+    metadata:
+      judul: "Masa berlaku JWT lebih dari 30 hari (Python)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-613: Insufficient Session Expiration"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+      likelihood: LOW
+      impact: MEDIUM
+      technology: [python, django, jwt, pyjwt]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html#token-sidejacking

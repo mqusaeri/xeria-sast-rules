@@ -1,0 +1,423 @@
+# Akses berkas, permintaan jaringan keluar, pengalihan, dan keluaran HTML di
+# sisi server Node.js.
+rules:
+  - id: node-path-traversal-fs
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Path berkas disusun dari input pengguna lalu dibaca, ditulis, atau
+      dihapus. Penyerang dapat memakai "../" untuk menjangkau berkas di luar
+      folder yang dimaksud, misalnya .env atau kunci server. Ambil nama dasarnya
+      dengan path.basename, lalu pastikan path.resolve hasilnya tetap berawalan
+      folder yang diizinkan.
+    mode: taint
+    pattern-sources: &node-sources
+      # Objek request Express/Koa/Next.js API, dan konteks Elysia (ctx.query).
+      - patterns:
+          - pattern-either:
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.params
+              - pattern: $REQ.headers
+              - pattern: $REQ.cookies
+              - pattern: $REQ.get(...)
+              - pattern: $REQ.header(...)
+              - pattern: $REQ.param(...)
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: ^(req|request|ctx|ctx\.request|context)$
+      # Hono: c.req.query(), c.req.param(), c.req.json(), ...
+      - patterns:
+          - pattern-either:
+              - pattern: $C.req.query(...)
+              - pattern: $C.req.queries(...)
+              - pattern: $C.req.param(...)
+              - pattern: $C.req.header(...)
+              - pattern: $C.req.json()
+              - pattern: $C.req.text()
+              - pattern: $C.req.parseBody(...)
+              - pattern: $C.req.formData()
+              - pattern: $C.req.valid(...)
+      # Handler Elysia (dan fungsi lain) yang men-destructure input request:
+      # ({ query, body, params, headers, cookie }) => ...
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  ({..., $SRC, ...}) => $RET
+              - pattern-inside: |
+                  ({..., $SRC, ...}) => { ... }
+              - pattern-inside: |
+                  async ({..., $SRC, ...}) => $RET
+              - pattern-inside: |
+                  async ({..., $SRC, ...}) => { ... }
+              - pattern-inside: |
+                  function $F({..., $SRC, ...}) { ... }
+              - pattern-inside: |
+                  async function $F({..., $SRC, ...}) { ... }
+          - pattern: $SRC
+          - metavariable-regex:
+              metavariable: $SRC
+              regex: ^(query|body|params|headers|cookie)$
+      # Server function TanStack Start: createServerFn(...).handler(({ data }) => ...)
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  $FN.handler(async ({..., data, ...}) => { ... })
+              - pattern-inside: |
+                  $FN.handler(({..., data, ...}) => { ... })
+              - pattern-inside: |
+                  $FN.handler(async ({..., data, ...}) => $RET)
+          - pattern: data
+      # Parameter controller NestJS: @Query(), @Body(), @Param(), @Headers()
+      - patterns:
+          - pattern-inside: |
+              class $C { ... $M(..., @$D(...) $P: $T, ...) { ... } ... }
+          - focus-metavariable: $P
+          - metavariable-regex:
+              metavariable: $D
+              regex: ^(Query|Body|Param|Headers)$
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $FS.readFile($PATH, ...)
+              - pattern: $FS.readFileSync($PATH, ...)
+              - pattern: $FS.writeFile($PATH, ...)
+              - pattern: $FS.writeFileSync($PATH, ...)
+              - pattern: $FS.appendFile($PATH, ...)
+              - pattern: $FS.unlink($PATH, ...)
+              - pattern: $FS.unlinkSync($PATH, ...)
+              - pattern: $FS.rm($PATH, ...)
+              - pattern: $FS.createReadStream($PATH, ...)
+              - pattern: $FS.createWriteStream($PATH, ...)
+              - pattern: $FS.readdir($PATH, ...)
+              - pattern: $RES.sendFile($PATH, ...)
+              - pattern: $RES.download($PATH, ...)
+          - metavariable-regex:
+              metavariable: $FS
+              regex: ^(fs|fsp|fs\.promises|promises|fse|res|response)$
+          - focus-metavariable: $PATH
+      - patterns:
+          - pattern-either:
+              - pattern: $RES.sendFile($PATH, ...)
+              - pattern: $RES.download($PATH, ...)
+          - focus-metavariable: $PATH
+    pattern-sanitizers:
+      - pattern: path.basename(...)
+      - pattern: basename(...)
+    metadata:
+      judul: "Path traversal pada operasi berkas (Node.js)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory"
+      owasp: "A01:2021 - Broken Access Control"
+      confidence: MEDIUM
+      likelihood: HIGH
+      impact: HIGH
+      technology: [node.js, express, nestjs, elysia, hono, bun]
+      references:
+        - https://owasp.org/www-community/attacks/Path_Traversal
+
+  - id: node-ssrf-http-request
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Permintaan HTTP dari server dikirim ke URL yang ditentukan input pengguna.
+      Penyerang dapat mengarahkannya ke layanan internal (misalnya
+      http://169.254.169.254/ untuk kredensial cloud, atau panel admin di
+      jaringan lokal). Batasi tujuan dengan daftar host yang diizinkan dan
+      tolak alamat IP internal.
+    mode: taint
+    pattern-sources: *node-sources
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: axios($URL, ...)
+              - pattern: axios.get($URL, ...)
+              - pattern: axios.post($URL, ...)
+              - pattern: axios.put($URL, ...)
+              - pattern: axios.delete($URL, ...)
+              - pattern: axios.request($URL, ...)
+              - pattern: fetch($URL, ...)
+              - pattern: got($URL, ...)
+              - pattern: got.get($URL, ...)
+              - pattern: got.post($URL, ...)
+              - pattern: needle($M, $URL, ...)
+              - pattern: http.get($URL, ...)
+              - pattern: https.get($URL, ...)
+              - pattern: http.request($URL, ...)
+              - pattern: https.request($URL, ...)
+              - pattern: this.httpService.get($URL, ...)
+              - pattern: this.httpService.post($URL, ...)
+          - focus-metavariable: $URL
+    # Nilai yang sudah di-encode hanya bisa menjadi bagian path atau query
+    # string — tidak bisa mengganti host tujuan.
+    pattern-sanitizers:
+      - pattern: encodeURIComponent(...)
+    metadata:
+      judul: "Server memanggil URL dari input pengguna (SSRF, Node.js)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-918: Server-Side Request Forgery"
+      owasp: "A10:2021 - Server-Side Request Forgery"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [node.js, express, nestjs, axios, elysia, hono, bun]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
+
+  - id: express-static-serves-server-directory
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      express.static menyajikan folder yang memuat kode server itu sendiri
+      (folder induk dari __dirname, atau __dirname). Siapa pun dapat mengunduh
+      kode sumber API, konfigurasi berisi secret cadangan, dan berkas basis
+      data SQLite lewat alamat seperti /server/routes/api.js. Pindahkan berkas
+      frontend ke folder khusus (mis. public/) dan sajikan folder itu saja.
+    # Pola SC WFH KODAM XXIII PW: rootDir = path.join(__dirname, '..') berisi
+    # index.html sekaligus server/ dan server/db/database.sqlite.
+    pattern-either:
+      - pattern: express.static(path.join(__dirname, ".."))
+      - pattern: express.static(path.resolve(__dirname, ".."))
+      - pattern: express.static(__dirname + "/..")
+      - pattern: express.static(__dirname)
+      - patterns:
+          - pattern: express.static($DIR, ...)
+          - pattern-inside: |
+              $DIR = path.join(__dirname, "..");
+              ...
+      - patterns:
+          - pattern: express.static($DIR, ...)
+          - pattern-inside: |
+              $DIR = path.resolve(__dirname, "..");
+              ...
+    metadata:
+      judul: "express.static menyajikan folder kode server"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-538: Insertion of Sensitive Information into Externally-Accessible File or Directory"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      technology: [express, node.js]
+      references:
+        - https://expressjs.com/en/starter/static-files.html
+
+  - id: express-open-redirect
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Pengguna dialihkan ke URL yang diambil dari request. Penyerang dapat
+      membuat tautan yang tampak berasal dari aplikasi ini tetapi mengarah ke
+      situs phishing. Alihkan hanya ke path relatif yang diawali "/" (bukan
+      "//"), atau cocokkan tujuan dengan daftar yang diizinkan.
+    mode: taint
+    pattern-sources: *node-sources
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $RES.redirect($URL)
+              - pattern: $RES.redirect($URL, $STATUS)
+              - pattern: $RES.redirect($STATUS, $URL)
+              - pattern: ctx.redirect($URL)
+              # Elysia: redirect(url) dari konteks, atau set.redirect = url
+              - pattern: redirect($URL, ...)
+              - pattern: $SET.redirect = $URL
+          - focus-metavariable: $URL
+    metadata:
+      judul: "Open redirect dari request (Express)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-601: URL Redirection to Untrusted Site"
+      owasp: "A01:2021 - Broken Access Control"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [express, koa, node.js, elysia, hono, bun]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html
+
+  - id: express-xss-html-response
+    languages:
+    - javascript
+    - typescript
+    severity: ERROR
+    message: Input request mengalir ke string HTML yang dikirim sebagai respons, atau ke API respons HTML
+      eksplisit. Rule mengikuti label HTML dan input pengguna melalui variabel perantara. Tinjau encoding
+      sesuai konteks dan template dengan output tanpa escape; gunakan JSON/text untuk data non-HTML.
+    mode: taint
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.headers
+        - pattern: $REQ.cookies
+        - pattern: $REQ.get(...)
+        - pattern: $REQ.header(...)
+        - pattern: $REQ.param(...)
+      - metavariable-regex:
+          metavariable: $REQ
+          regex: ^(req|request|ctx|ctx\.request|context)$
+      label: USER
+    - patterns:
+      - pattern-either:
+        - pattern: $C.req.query(...)
+        - pattern: $C.req.queries(...)
+        - pattern: $C.req.param(...)
+        - pattern: $C.req.header(...)
+        - pattern: $C.req.json()
+        - pattern: $C.req.text()
+        - pattern: $C.req.parseBody(...)
+        - pattern: $C.req.formData()
+        - pattern: $C.req.valid(...)
+      label: USER
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({..., $SRC, ...}) => $RET
+
+            '
+        - pattern-inside: '({..., $SRC, ...}) => { ... }
+
+            '
+        - pattern-inside: 'async ({..., $SRC, ...}) => $RET
+
+            '
+        - pattern-inside: 'async ({..., $SRC, ...}) => { ... }
+
+            '
+        - pattern-inside: 'function $F({..., $SRC, ...}) { ... }
+
+            '
+        - pattern-inside: 'async function $F({..., $SRC, ...}) { ... }
+
+            '
+      - pattern: $SRC
+      - metavariable-regex:
+          metavariable: $SRC
+          regex: ^(query|body|params|headers|cookie)$
+      label: USER
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '$FN.handler(async ({..., data, ...}) => { ... })
+
+            '
+        - pattern-inside: '$FN.handler(({..., data, ...}) => { ... })
+
+            '
+        - pattern-inside: '$FN.handler(async ({..., data, ...}) => $RET)
+
+            '
+      - pattern: data
+      label: USER
+    - patterns:
+      - pattern-inside: 'class $C { ... $M(..., @$D(...) $P: $T, ...) { ... } ... }
+
+          '
+      - focus-metavariable: $P
+      - metavariable-regex:
+          metavariable: $D
+          regex: ^(Query|Body|Param|Headers)$
+      label: USER
+    - patterns:
+      - pattern: '"$TEXT"'
+      - metavariable-regex:
+          metavariable: $TEXT
+          regex: (?s).*<[a-zA-Z%].*
+      label: HTML
+      exact: true
+    - patterns:
+      - pattern: '`...`'
+      - pattern-regex: <[a-zA-Z]
+      label: HTML
+      exact: true
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: $RES.send($HTML)
+      - metavariable-regex:
+          metavariable: $RES
+          regex: ^(res|response|reply)$
+      - focus-metavariable: $HTML
+      requires: USER and HTML
+    - patterns:
+      - pattern: $C.html($HTML, ...)
+      - pattern-not: $C.html(html`...`, ...)
+      - focus-metavariable: $HTML
+      requires: USER
+    - patterns:
+      - pattern: $RES.write($HTML)
+      - pattern-inside: '$RES.setHeader("Content-Type", "text/html");
+
+          ...
+
+          '
+      - focus-metavariable: $HTML
+      requires: USER
+    - patterns:
+      - pattern: $RES.end($HTML)
+      - pattern-inside: '$RES.setHeader("Content-Type", "text/html");
+
+          ...
+
+          '
+      - focus-metavariable: $HTML
+      requires: USER
+    pattern-sanitizers:
+    - pattern: escapeHtml(...)
+    - pattern: he.encode(...)
+    - pattern: he.escape(...)
+    - pattern: validator.escape(...)
+    - pattern: DOMPurify.sanitize(...)
+    - pattern: xss(...)
+    metadata:
+      judul: XSS pada respons HTML (Express)
+      category: security
+      subcategory:
+      - vuln
+      cwe: 'CWE-79: Improper Neutralization of Input During Web Page Generation'
+      owasp: A03:2021 - Injection
+      confidence: MEDIUM
+      likelihood: HIGH
+      impact: MEDIUM
+      technology:
+      - express
+      - node.js
+      - elysia
+      - hono
+      - bun
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+
+  - id: express-error-stack-disclosure
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Detail galat (stack trace) dikirim ke klien. Isinya membocorkan struktur
+      folder, versi pustaka, dan potongan query yang membantu penyerang
+      menyusun serangan berikutnya. Catat detailnya di log server dan kirim
+      pesan umum ke klien.
+    patterns:
+      - pattern-either:
+          - pattern: $RES.send($ERR.stack)
+          - pattern: '$RES.json({..., $K: $ERR.stack, ...})'
+          - pattern: $RES.status($S).send($ERR.stack)
+          - pattern: '$RES.status($S).json({..., $K: $ERR.stack, ...})'
+      - metavariable-regex:
+          metavariable: $RES
+          regex: ^(res|response|reply)$
+    metadata:
+      judul: "Stack trace galat dikirim ke klien (Express)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-209: Generation of Error Message Containing Sensitive Information"
+      owasp: "A04:2021 - Insecure Design"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: LOW
+      technology: [express, node.js, elysia, hono, bun]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html

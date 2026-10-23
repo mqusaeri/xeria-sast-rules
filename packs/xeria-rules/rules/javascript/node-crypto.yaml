@@ -1,0 +1,202 @@
+# Kriptografi dan TLS di Node.js.
+rules:
+  - id: node-weak-hash-algorithm
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Algoritma hash MD5 atau SHA-1 sudah dapat dibuat tabrakannya (collision)
+      dan terlalu cepat untuk melindungi password. Untuk integritas data gunakan
+      SHA-256 atau lebih kuat; untuk password gunakan bcrypt, scrypt, atau
+      argon2 dengan salt.
+    patterns:
+      - pattern-either:
+          - pattern: $C.createHash("$ALG")
+          - pattern: createHash("$ALG")
+          - pattern: $C.createHmac("$ALG", ...)
+          - pattern: createHmac("$ALG", ...)
+      - metavariable-regex:
+          metavariable: $ALG
+          regex: (?i)^(md2|md4|md5|sha1|sha-1|ripemd160)$
+    metadata:
+      judul: "Hash lemah MD5 atau SHA-1 (Node.js)"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-328: Use of Weak Hash"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [node.js, node-crypto]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+
+  - id: node-weak-cipher-algorithm
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Cipher yang dipakai sudah dianggap rusak atau lemah (DES, 3DES, RC4,
+      Blowfish, atau mode ECB yang membocorkan pola data). Data terenkripsi
+      dapat dipecahkan. Gunakan AES-256-GCM atau ChaCha20-Poly1305 dengan IV
+      acak untuk setiap enkripsi.
+    patterns:
+      - pattern-either:
+          - pattern: $C.createCipheriv("$ALG", ...)
+          - pattern: createCipheriv("$ALG", ...)
+          - pattern: $C.createDecipheriv("$ALG", ...)
+          - pattern: createDecipheriv("$ALG", ...)
+      - metavariable-regex:
+          metavariable: $ALG
+          regex: (?i)^(des|des-.*|des3|3des|rc2.*|rc4.*|bf|bf-.*|blowfish.*|.*-ecb|idea.*|cast.*)$
+    metadata:
+      judul: "Cipher lemah atau mode ECB (Node.js)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [node.js, node-crypto]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html
+
+  - id: node-deprecated-createcipher
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      crypto.createCipher menurunkan kunci dari password dengan MD5 satu putaran
+      tanpa salt dan tanpa IV, sehingga enkripsi mudah dipecahkan; fungsi ini
+      sudah dihapus dari Node.js modern. Gunakan createCipheriv dengan kunci dari
+      scrypt/pbkdf2 dan IV acak.
+    pattern-either:
+      - pattern: $C.createCipher(...)
+      - pattern: $C.createDecipher(...)
+      - pattern: createCipher(...)
+      - pattern: createDecipher(...)
+    metadata:
+      judul: "crypto.createCipher usang dan mudah dipecahkan"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-916: Use of Password Hash With Insufficient Computational Effort"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [node.js, node-crypto]
+      references:
+        - https://nodejs.org/api/deprecations.html#DEP0106
+
+  - id: node-insecure-random-for-secret
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Math.random() dipakai untuk membuat nilai rahasia (token, OTP, password,
+      kunci, atau ID sesi). Keluarannya dapat ditebak dari beberapa nilai
+      sebelumnya. Gunakan crypto.randomBytes, crypto.randomInt, atau
+      crypto.randomUUID.
+    patterns:
+      - pattern-either:
+          - pattern: const $NAME = <... Math.random() ...>;
+          - pattern: let $NAME = <... Math.random() ...>;
+          - pattern: var $NAME = <... Math.random() ...>;
+          - pattern: $NAME = <... Math.random() ...>
+          - pattern: |
+              function $NAME(...) { ... return <... Math.random() ...>; }
+      - metavariable-regex:
+          metavariable: $NAME
+          # Nama yang jelas menandakan nilai rahasia. "key", "kode", "pin", dan
+          # "reset" sendirian sengaja tidak dipakai: di proyek nyata kata itu
+          # menamai kunci objek S3, kode wilayah, dan penghitung.
+          regex: (?i).*(token|secret|password|passwd|otp|nonce|salt|sessionid|session_id|sessid|csrf|apikey|api_key|accesskey|secretkey|privatekey|signingkey|encryptionkey|verificationcode|kodeverifikasi|sandi|rahasia).*
+    metadata:
+      judul: "Nilai rahasia dibuat dengan Math.random()"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [node.js, javascript]
+      references:
+        - https://nodejs.org/api/crypto.html#cryptorandombytessize-callback
+
+  - id: node-tls-verification-disabled
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Verifikasi sertifikat TLS dimatikan. Aplikasi akan menerima sertifikat
+      palsu, sehingga penyerang di jaringan dapat membaca dan mengubah lalu
+      lintas HTTPS, termasuk kredensial. Hapus opsi ini; untuk sertifikat
+      internal, tambahkan CA-nya lewat opsi ca.
+    pattern-either:
+      - pattern: |
+          {..., rejectUnauthorized: false, ...}
+      - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+      - pattern: process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
+    metadata:
+      judul: "Verifikasi sertifikat TLS dimatikan (Node.js)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-295: Improper Certificate Validation"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [node.js, axios, https]
+      references:
+        - https://nodejs.org/api/tls.html#tlsconnectoptions-callback
+
+  - id: node-weak-rsa-key-size
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Kunci RSA dibuat dengan panjang kurang dari 2048 bit, yang sudah dapat
+      dipecahkan dengan sumber daya yang wajar. Gunakan minimal 2048 bit
+      (disarankan 3072) atau beralih ke kurva eliptik.
+    patterns:
+      - pattern-either:
+          - pattern: '$C.generateKeyPair("rsa", {..., modulusLength: $N, ...}, ...)'
+          - pattern: '$C.generateKeyPairSync("rsa", {..., modulusLength: $N, ...})'
+          - pattern: 'generateKeyPairSync("rsa", {..., modulusLength: $N, ...})'
+      - metavariable-comparison:
+          metavariable: $N
+          comparison: $N < 2048
+    metadata:
+      judul: "Kunci RSA kurang dari 2048 bit"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-326: Inadequate Encryption Strength"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: LOW
+      impact: HIGH
+      technology: [node.js, node-crypto]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html
+
+  - id: node-hardcoded-encryption-key
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Kunci enkripsi ditulis langsung di kode. Siapa pun yang dapat membaca kode
+      (repositori, backup, atau bundel yang ter-deploy) dapat mendekripsi
+      seluruh data. Baca kunci dari environment variable atau secret manager.
+    pattern-either:
+      - pattern: $C.createCipheriv($ALG, "...", ...)
+      - pattern: $C.createDecipheriv($ALG, "...", ...)
+      - pattern: $C.createCipheriv($ALG, Buffer.from("..."), ...)
+      - pattern: $C.createDecipheriv($ALG, Buffer.from("..."), ...)
+      - pattern: $C.createHmac($ALG, "...")
+    metadata:
+      judul: "Kunci enkripsi tertulis di kode (Node.js)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-321: Use of Hard-coded Cryptographic Key"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [node.js, node-crypto]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html

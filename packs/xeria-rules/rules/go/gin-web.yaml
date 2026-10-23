@@ -1,0 +1,407 @@
+# Aplikasi web Go: Gin, net/http, gin-contrib/cors, golang-jwt.
+rules:
+  - id: go-cors-wildcard-with-credentials
+    languages:
+    - go
+    severity: INFO
+    message: Respons CORS menggabungkan wildcard origin dengan credentials. Browser menolak pembacaan respons
+      berkredensial pada kombinasi ini; ini konfigurasi yang perlu ditinjau, bukan bukti eksfiltrasi cookie.
+      Gunakan origin eksplisit bila akses berkredensial dibutuhkan, atau matikan credentials untuk API publik.
+    pattern-either:
+    - pattern: '$A.Header("Access-Control-Allow-Origin", "*")
+
+        ...
+
+        $B.Header("Access-Control-Allow-Credentials", "true")
+
+        '
+    - pattern: '$B.Header("Access-Control-Allow-Credentials", "true")
+
+        ...
+
+        $A.Header("Access-Control-Allow-Origin", "*")
+
+        '
+    - pattern: '$A.Header().Set("Access-Control-Allow-Origin", "*")
+
+        ...
+
+        $B.Header().Set("Access-Control-Allow-Credentials", "true")
+
+        '
+    - pattern: '$B.Header().Set("Access-Control-Allow-Credentials", "true")
+
+        ...
+
+        $A.Header().Set("Access-Control-Allow-Origin", "*")
+
+        '
+    - pattern: 'cors.Config{..., AllowAllOrigins: true, ..., AllowCredentials: true, ...}'
+    - pattern: 'cors.Config{..., AllowCredentials: true, ..., AllowAllOrigins: true, ...}'
+    - pattern: 'cors.Config{..., AllowOrigins: []string{"*"}, ..., AllowCredentials: true, ...}'
+    - pattern: 'cors.Config{..., AllowCredentials: true, ..., AllowOrigins: []string{"*"}, ...}'
+    metadata:
+      judul: CORS mengizinkan semua origin sekaligus kredensial (Go)
+      category: security
+      subcategory:
+      - audit
+      cwe: 'CWE-942: Permissive Cross-domain Policy with Untrusted Domains'
+      owasp: A05:2021 - Security Misconfiguration
+      confidence: HIGH
+      likelihood: LOW
+      impact: LOW
+      technology:
+      - gin
+      - go
+      - net/http
+      - cors
+      references:
+      - https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#requests_with_credentials
+      - https://github.com/gin-contrib/cors
+
+  - id: go-cors-wildcard-origin
+    languages: [go]
+    severity: INFO
+    message: >-
+      Respons mengizinkan semua origin (Access-Control-Allow-Origin: "*").
+      Untuk API yang memerlukan login, batasi ke origin aplikasi sendiri
+      supaya respons tidak dapat dibaca skrip dari situs lain.
+    patterns:
+      - pattern-either:
+          - pattern: $A.Header("Access-Control-Allow-Origin", "*")
+          - pattern: $A.Header().Set("Access-Control-Allow-Origin", "*")
+      # Kombinasi dengan credentials ditangani go-cors-wildcard-with-credentials.
+      - pattern-not-inside: |
+          $A.Header("Access-Control-Allow-Origin", "*")
+          ...
+          $B.Header("Access-Control-Allow-Credentials", "true")
+      - pattern-not-inside: |
+          $B.Header("Access-Control-Allow-Credentials", "true")
+          ...
+          $A.Header("Access-Control-Allow-Origin", "*")
+      - pattern-not-inside: |
+          $A.Header().Set("Access-Control-Allow-Origin", "*")
+          ...
+          $B.Header().Set("Access-Control-Allow-Credentials", "true")
+      - pattern-not-inside: |
+          $B.Header().Set("Access-Control-Allow-Credentials", "true")
+          ...
+          $A.Header().Set("Access-Control-Allow-Origin", "*")
+    metadata:
+      judul: "CORS mengizinkan semua origin (Go)"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-942: Permissive Cross-domain Policy with Untrusted Domains"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: MEDIUM
+      likelihood: LOW
+      impact: LOW
+      technology: [gin, go, net/http, cors]
+      references:
+        - https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+
+  - id: go-jwt-verification-error-ignored
+    languages: [go]
+    severity: ERROR
+    message: >-
+      Kegagalan verifikasi token (JWT) hanya dicatat, lalu proses tetap
+      berlanjut. Token palsu atau yang tanda tangannya salah diperlakukan sama
+      dengan token sah, sehingga pemeriksaan ini tidak melindungi apa pun.
+      Hentikan permintaan (return/abort) begitu verifikasi gagal.
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern-either:
+                  - pattern: |
+                      $CLAIMS, $ERR := $VERIFY(...)
+                      if $ERR != nil {
+                        ...
+                      }
+                  - pattern: |
+                      $CLAIMS, $ERR := $OBJ.$VERIFY(...)
+                      if $ERR != nil {
+                        ...
+                      }
+              - metavariable-regex:
+                  metavariable: $VERIFY
+                  regex: (?i)^(verify\w*(jwt|token|signature)\w*|validate\w*(jwt|token|signature)\w*|parse\w*(jwt|token)\w*|(jwt|token)\w*(verify|validate|parse)\w*)$
+          - pattern: |
+              $CLAIMS, $ERR := jwt.Parse(...)
+              if $ERR != nil {
+                ...
+              }
+          - pattern: |
+              $CLAIMS, $ERR := jwt.ParseWithClaims(...)
+              if $ERR != nil {
+                ...
+              }
+      - pattern-not: |
+          $CLAIMS, $ERR := $X(...)
+          if $ERR != nil {
+            ...
+            return ...
+          }
+      - pattern-not: |
+          $CLAIMS, $ERR := $X(...)
+          if $ERR != nil {
+            ...
+            return
+          }
+      - pattern-not: |
+          $CLAIMS, $ERR := $X(...)
+          if $ERR != nil {
+            ...
+            $C.AbortWithStatus(...)
+            ...
+          }
+      - pattern-not: |
+          $CLAIMS, $ERR := $X(...)
+          if $ERR != nil {
+            ...
+            $C.AbortWithStatusJSON(...)
+            ...
+          }
+      - pattern-not: |
+          $CLAIMS, $ERR := $X(...)
+          if $ERR != nil {
+            ...
+            panic(...)
+          }
+    metadata:
+      judul: "Kegagalan verifikasi JWT diabaikan (Go)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-347: Improper Verification of Cryptographic Signature"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: MEDIUM
+      likelihood: HIGH
+      impact: HIGH
+      technology: [go, jwt, golang-jwt, onlyoffice]
+      references:
+        - https://api.onlyoffice.com/docs/docs-api/additional-api/signature/
+        - https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html
+
+  - id: go-jwt-verification-optional
+    languages: [go]
+    severity: ERROR
+    message: >-
+      Token hanya diverifikasi bila ada. Permintaan tanpa token sama sekali
+      melewati verifikasi dan tetap diproses. Pada endpoint tanpa login —
+      misalnya callback OnlyOffice atau webhook — tolak permintaan yang tidak
+      membawa token yang sah.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              if $TOK != "" { ... }
+          - pattern: |
+              if $TOK != "" && $X { ... }
+          - pattern: |
+              if $X && $TOK != "" { ... }
+      - pattern-either:
+          - pattern: |
+              if $COND {
+                ...
+                $CL, $ERR := $VERIFY(..., $TOK, ...)
+                ...
+              }
+          - pattern: |
+              if $COND {
+                ...
+                $CL, $ERR := $OBJ.$VERIFY(..., $TOK, ...)
+                ...
+              }
+      - metavariable-regex:
+          metavariable: $VERIFY
+          regex: (?i)^(verify\w*(jwt|token|signature)\w*|validate\w*(jwt|token|signature)\w*|parse\w*(jwt|token)\w*|(jwt|token)\w*(verify|validate|parse)\w*)$
+      - metavariable-regex:
+          metavariable: $TOK
+          regex: (?i).*(token|jwt|authorization|signature|bearer)
+    metadata:
+      judul: "Token hanya diverifikasi bila dikirim (Go)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-306: Missing Authentication for Critical Function"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: MEDIUM
+      likelihood: HIGH
+      impact: HIGH
+      technology: [go, jwt, golang-jwt, onlyoffice]
+      references:
+        - https://api.onlyoffice.com/docs/docs-api/additional-api/signature/
+
+  - id: go-ssrf-url-from-request-field
+    languages: [go]
+    severity: WARNING
+    message: >-
+      Server mengunduh atau memanggil URL yang diambil dari data permintaan
+      (misalnya req.URL pada callback). Penyerang dapat mengarahkan server ke
+      alamat internal (metadata cloud, basis data, layanan admin) atau
+      memasukkan berkas pilihannya sebagai isi dokumen. Batasi host tujuan
+      dengan allowlist dan tolak alamat IP privat.
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: http.Get($REQ.$FIELD)
+              - pattern: http.Head($REQ.$FIELD)
+              - pattern: http.Post($REQ.$FIELD, ...)
+              - pattern: http.NewRequest($M, $REQ.$FIELD, ...)
+              - pattern: http.NewRequestWithContext($CTX, $M, $REQ.$FIELD, ...)
+              - pattern: $CLIENT.Get($REQ.$FIELD)
+          - metavariable-regex:
+              metavariable: $FIELD
+              regex: ^(URL|Url|URI|Uri|DownloadURL|DownloadUrl|FileURL|FileUrl|CallbackURL|CallbackUrl|Link|Href|Endpoint|WebhookURL|WebhookUrl|Target|Source)$
+          # Struct konfigurasi bukan input request (ETWPAD: ApplyURI(cfg.URL)).
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: (?i)^(?!(cfg|conf|config|configs|settings?|env|opts?|options|app|appconfig)$)\w+$
+      - patterns:
+          - pattern-either:
+              - pattern: $SVC.$FETCH($REQ.$FIELD)
+              - pattern: $SVC.$FETCH($CTX, $REQ.$FIELD)
+          - metavariable-regex:
+              metavariable: $FIELD
+              regex: ^(URL|Url|URI|Uri|DownloadURL|DownloadUrl|FileURL|FileUrl|CallbackURL|CallbackUrl|Link|Href|Endpoint|WebhookURL|WebhookUrl|Target|Source)$
+          # Struct konfigurasi bukan input request (ETWPAD: ApplyURI(cfg.URL)).
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: (?i)^(?!(cfg|conf|config|configs|settings?|env|opts?|options|app|appconfig)$)\w+$
+          - metavariable-regex:
+              metavariable: $FETCH
+              regex: (?i)^(download\w*|fetch\w*|get(url|file|document|remote)\w*|proxy\w*|request\w*|call\w*)$
+    metadata:
+      judul: "Server memanggil URL dari data permintaan (SSRF, Go)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-918: Server-Side Request Forgery (SSRF)"
+      owasp: "A10:2021 - Server-Side Request Forgery (SSRF)"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [go, net/http, gin, onlyoffice]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
+
+  - id: go-upload-trusts-client-content-type
+    languages: [go]
+    severity: WARNING
+    message: >-
+      Jenis berkas unggahan diambil dari header Content-Type yang dikirim
+      klien. Nilai ini sepenuhnya dikendalikan pengunggah: berkas HTML atau
+      SVG berisi skrip dapat diberi label image/png, lalu disajikan kembali
+      dari penyimpanan dan dieksekusi di browser korban. Tentukan jenis dari
+      isi berkas (http.DetectContentType) dan batasi daftar jenis yang
+      diterima.
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              $F, $H, $E := $C.Request.FormFile(...)
+              ...
+          - pattern-inside: |
+              $H, $E := $C.FormFile(...)
+              ...
+          - pattern-inside: |
+              $F, $H, $E := $R.FormFile(...)
+              ...
+      - pattern: $H.Header.Get("Content-Type")
+    metadata:
+      judul: "Jenis berkas unggahan dipercaya dari Content-Type klien (Go)"
+      category: security
+      subcategory: [audit]
+      cwe: "CWE-434: Unrestricted Upload of File with Dangerous Type"
+      owasp: "A04:2021 - Insecure Design"
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      technology: [go, gin, net/http]
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
+
+  - id: go-panic-stack-trace-in-response
+    languages: [go]
+    severity: WARNING
+    message: >-
+      Stack trace hasil debug.Stack() dimasukkan ke respons yang dikirim ke
+      klien saat panic. Isinya — jalur berkas sumber, nama fungsi internal,
+      versi modul — memetakan kode server untuk penyerang, dan panic dapat
+      dipicu sengaja dengan input rusak. Catat stack trace ke log saja; kirim
+      pesan umum dengan ID insiden ke klien.
+    patterns:
+      - pattern-inside: |
+          if $E := recover(); $E != nil { ... }
+      # Argumen langsung, supaya pemanggilan pembungkus di luarnya tidak ikut
+      # dilaporkan sebagai temuan kedua.
+      - pattern-either:
+          - pattern: $CALL(..., string(debug.Stack()), ...)
+          - pattern: $CALL(..., debug.Stack(), ...)
+      # Pemanggilan pencatat log (pola Puspalad: logger.Errorf dengan
+      # stack_trace) sah; konversi string(...) sendiri bukan tujuan akhir.
+      - metavariable-regex:
+          metavariable: $CALL
+          regex: ^(?!string$)(?!.*(?i:log|print|errorf|warnf|infof|debugf|sentry|capture|zap|zerolog)).*$
+      # Argumen di dalam pemanggilan log (mis. map stack_trace) juga sah.
+      - pattern-not-inside: $L.Errorf(...)
+      - pattern-not-inside: $L.Error(...)
+      - pattern-not-inside: $L.Printf(...)
+      - pattern-not-inside: $L.Println(...)
+      - pattern-not-inside: $L.Warnf(...)
+      - pattern-not-inside: log.$F(...)
+    metadata:
+      judul: "Stack trace panic dikirim ke klien (Go)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-209: Generation of Error Message Containing Sensitive Information"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: MEDIUM
+      likelihood: LOW
+      impact: LOW
+      technology: [go, gin]
+      references:
+        - https://cwe.mitre.org/data/definitions/209.html
+        - https://owasp.org/www-community/Improper_Error_Handling
+
+  - id: go-hardcoded-default-account-password
+    languages: [go]
+    severity: ERROR
+    message: >-
+      Akun dibuat dengan password bawaan yang tertulis di kode. Semua akun
+      yang dibuat lewat jalur ini memakai password yang sama, dan siapa pun
+      yang pernah membaca kodenya — atau menebak password umum seperti
+      P@ssw0rd — dapat masuk ke akun yang belum menggantinya. Buat password
+      acak per akun (crypto/rand) yang dikirim lewat kanal terpisah, atau
+      tautan aktivasi sekali pakai, dan wajibkan penggantian saat login
+      pertama.
+    # Pola ETWPAD: hashing.HashPassword("P@ssw0rd") untuk akun developer baru
+    # dan constants.DefaultPassword untuk akun personel hasil impor.
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: $H.HashPassword("$PW")
+              - pattern: HashPassword("$PW")
+              - pattern: bcrypt.GenerateFromPassword([]byte("$PW"), ...)
+          - metavariable-regex:
+              metavariable: $PW
+              regex: ^.{4,}$
+      - patterns:
+          - pattern: $NAME = "$PW"
+          - metavariable-regex:
+              metavariable: $NAME
+              # Nama utuh, bukan awalan: TemplateEmailResetPassword bukan password.
+              regex: (?i)^(default|initial|temp|temporary|awal|bawaan)_?(user|account|admin|akun)?_?pass(word)?$
+          - metavariable-regex:
+              metavariable: $PW
+              regex: ^.{4,}$
+    paths:
+      exclude: ["*_test.go"]
+    metadata:
+      judul: "Akun dibuat dengan password bawaan di kode (Go)"
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-1392: Use of Default Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      technology: [go]
+      references:
+        - https://cwe.mitre.org/data/definitions/1392.html
+        - https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html

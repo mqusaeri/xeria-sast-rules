@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "status": "historical-only-not-loaded",
+  "reason": "Project-specific observations do not justify global exclusions; no validated project-scoped loader is present in this repository.",
+  "entries": [
+    {
+      "id": "semgrep-rules.rules.javascript.lang.security.audit.unsafe-dynamic-method",
+      "reason": "Puspalad: 5 dari 5 temuan palsu — akses objek gaya menu (styles[element]) pada komponen template, bukan pemanggilan method dari input pengguna.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.javascript.lang.security.audit.unsafe-formatstring",
+      "reason": "Puspalad 2/2, SIPAKAT 2/2 palsu — template literal pada console.log; paling jauh memalsukan baris log, bukan celah keamanan aplikasi.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.javascript.lang.security.audit.detect-non-literal-regexp",
+      "reason": "Puspalad 4/4 palsu — pola sudah di-escape atau berasal dari ID internal. Risiko ReDoS nyata perlu dinilai manual, bukan dari setiap new RegExp.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.typescript.react.security.audit.react-href-var",
+      "reason": "Puspalad 1/1 palsu — href dari konfigurasi menu statis. Skema berbahaya ditangani xeria-rules react-href-javascript-scheme.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.go.lang.security.audit.xss.no-direct-write-to-responsewriter",
+      "reason": "Puspalad 1/1 palsu — menulis JSON hasil json.Marshal dengan Content-Type application/json, bukan HTML.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.javascript.lang.security.html-in-template-string",
+      "reason": "Puspalad 3/4, SIPAKAT 9/9, SIPANSA 9/9 palsu — formatter tooltip grafik dan skrip pembuat PDF dokumentasi saat build. Pola yang benar-benar berbahaya (HTML tanpa escape lalu ke innerHTML) ditangani xeria-rules dom-innerhtml-from-html-builder.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.dockerfile.security.secret-in-build-arg",
+      "reason": "Puspalad 5/6 palsu — menandai setiap ARG bernama URL atau token publik. Diganti xeria-rules dockerfile-secret-in-build-arg yang hanya menilai nama rahasia dan melewatkan variabel publik (NEXT_PUBLIC_*, *_URL).",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.typescript.react.security.audit.react-dangerouslysetinnerhtml",
+      "reason": "Kembar dengan xeria-rules react-dangerously-set-inner-html pada baris yang sama; aturan XERIA mengikuti aliran data sehingga template statis tidak dilaporkan.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.javascript.browser.security.insecure-document-method",
+      "reason": "Kembar dengan semgrep insecure-innerhtml pada baris yang sama (Puspalad 2/2) — satu penulisan innerHTML dilaporkan dua kali.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.javascript.jquery.security.audit.jquery-insecure-method",
+      "reason": "SIMAWAS 44 temuan, sampel seluruhnya palsu — .append() elemen hidden berisi ID internal dan HTML statis. Pola berbahaya (field teks tanpa escape) ditangani xeria-rules dom-html-from-unescaped-text-field.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.javascript.jquery.security.audit.jquery-insecure-selector",
+      "reason": "SIMAWAS 36 temuan, sampel seluruhnya palsu — selektor $('#id-' + key) dari ID elemen buatan halaman sendiri, bukan dari URL atau input.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.javascript.jquery.security.audit.prohibit-jquery-html",
+      "reason": "SIMAWAS 2 temuan di view dan puluhan di pustaka jQuery terminifikasi — menandai setiap .html(), termasuk HTML statis. Diganti xeria-rules dom-html-from-unescaped-text-field.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.javascript.browser.security.insecure-innerhtml",
+      "reason": "SIMAWAS 43 temuan, sampel palsu — pesan balasan JSON server sendiri (d.message), HTML statis, dan nilai yang sudah melalui esc(). Puspalad 2: satu ditangani xeria-rules dom-innerhtml-from-html-builder, satu mengurai isi editor milik pengguna sendiri. Field teks pengguna tanpa escape ditangani xeria-rules dom-html-from-unescaped-text-field.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.javascript.browser.security.js-open-redirect-from-function",
+      "reason": "SIMAWAS 2/2, SIPAKAT 1/1, SIPANSA 2/2 palsu — window.location.href dari balasan JSON server sendiri (j.redirect) atau dari Response redirect 307 TanStack. Pengalihan dari URL/dokumen ditangani xeria-rules dom-open-redirect-from-url.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.php.lang.security.exec-use",
+      "reason": "SIMAWAS 2/2 palsu — argumen shell_exec sudah dibungkus escapeshellarg dan nama programnya tetap. Diganti xeria-rules php-command-injection-from-request (hanya input request tanpa escape).",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.php.lang.security.unlink-use",
+      "reason": "SIMAWAS 3/3 palsu — path berkas sementara buatan server dan pembersihan di tests/. Diganti xeria-rules php-file-delete-from-request.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.php.laravel.security.laravel-cookie-null-domain",
+      "reason": "SIMAWAS 1/1 palsu — 'domain' => env('SESSION_DOMAIN') bernilai null adalah bawaan Laravel yang aman (cookie hanya untuk host itu sendiri).",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.php.laravel.security.laravel-cookie-secure-set",
+      "reason": "SIMAWAS 1/1 — kelemahannya benar, tetapi lokasi yang dilaporkan baris 'cookie' (130), bukan baris 'secure' (172). Diganti xeria-rules laravel-session-cookie-secure-not-enforced yang menunjuk baris tepat.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.php.lang.security.injection.tainted-sql-string",
+      "reason": "infolahta 5/5 palsu — aturannya hanya mengenal mysqli_real_escape_string sebagai penetral, sehingga \"LIMIT $mulai\" yang berasal dari (int) $_GET['page'] dan nama placeholder PDO dilaporkan sebagai SQL Injection. Diganti xeria-rules php-sql-string-from-request: jangkauannya sama (termasuk pembungkus proyek seperti getOne($sql) di SIMRS) tetapi mengenali cor integer, escape driver, dan nama placeholder.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.php.lang.security.injection.echoed-request",
+      "reason": "infolahta 16 temuan, seluruh sampel palsu — urlencode($cari), aritmetika halaman ($halaman - 1), penghitung perulangan, dan data basis data. Aturan ini juga melewatkan XSS nyata di SIMRS (echo \"<input value=$action>\") yang ditemukan xeria-rules php-xss-echo-request, yang penetralnya memuat urlencode/intval/count.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.php.lang.security.injection.tainted-callable",
+      "reason": "infolahta 4/4 palsu — daftar sink-nya memuat pola umum `$EVLOOP->prepare($CALLABLE, ...)`, sehingga setiap $pdo->prepare($sql) dilaporkan sebagai callable dari input. Eksekusi kode dari request ditangani xeria-rules php-dynamic-code-from-request.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.generic.nginx.security.request-host-used",
+      "reason": "infolahta 2/2 palsu — aturan konfigurasi nginx ini berbahasa generic, sehingga variabel PHP bernama $host ($host = \"localhost\") ikut cocok.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.html.security.plaintext-http-link",
+      "reason": "infolahta 5/5 palsu — seluruhnya tautan di dokumentasi pustaka FPDF yang ikut tersalin ke proyek. Aturannya menandai setiap tautan http://. Diganti xeria-rules html-resource-over-plain-http yang hanya menilai skrip, bingkai, dan formulir — yang isinya dieksekusi atau membawa data.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.php.lang.security.injection.tainted-filename",
+      "reason": "SIMRS 2/2 kembar sebaris dengan xeria-rules php-file-delete-from-request (unlink($_GET['file_url'])), tetapi ber-CWE berbeda sehingga tidak ikut digabung dan baris yang sama dilaporkan dua kali. Path dari request ditangani xeria-rules php-path-traversal-from-request dan php-file-delete-from-request.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.php.lang.security.injection.printed-request",
+      "reason": "SIMRS webapps 41 temuan, sampel palsu — `print $baris[0]` mencetak kolom hasil mysqli_fetch_array(), bukan input request; aturannya tidak mengenal pembacaan hasil query sebagai batas taint. Bentuk print(...) dari request langsung ditangani xeria-rules php-xss-echo-request.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.javascript.lang.security.detect-insecure-websocket",
+      "reason": "E-Office TNI AD Mobile 3/3 palsu — regex `\\bws://` atas berkas apa pun, termasuk baris kode Dart yang sudah dikomentari. Diganti aturan yang membaca kode: xeria-rules cleartext-http-request (new WebSocket di JavaScript) dan dart-cleartext-http-url (WebSocketChannel/WebSocket.connect).",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.php.lang.security.weak-crypto",
+      "reason": "Pengaduan Sisfo TNI AD 6/6 palsu — md5() dipakai membentuk nama kunci notifikasi, bukan untuk keamanan; aturan ini menandai setiap md5/sha1/crc32. Hash password lemah ditangani xeria-rules php-weak-password-hash.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.go.lang.security.audit.crypto.missing-ssl-minversion",
+      "reason": "ETWPAD backend (Go 1.24) 1/1 palsu — sejak Go 1.18 klien crypto/tls memakai TLS 1.2 sebagai versi minimum bawaan, jadi tls.Config tanpa MinVersion tidak lagi menerima TLS 1.0/1.1. Proyek Go di bawah 1.18 tidak dicakup lagi aturan ini.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.go.lang.security.audit.crypto.math-random-used",
+      "reason": "ETWPAD 2/2 palsu — aturan menandai setiap berkas yang mengimpor math/rand tanpa menilai nilai yang dibuat: jitter backoff koneksi SFTP (backend-kpr scheduler/sftp.go) dan header X-EXTERNAL-ID SNAP BI (backend-integration-bri helpers/helper.go, id lacak permintaan bukan kredensial). Temuan dilaporkan pada baris import, bukan pada pemakaian, sehingga tidak dapat ditelusuri. Diganti xeria-rules go-insecure-random-for-secret yang hanya menilai nilai yang dinamai token, OTP, sandi, salt, nonce, kunci, atau sesi.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.java.lang.security.audit.formatted-sql-string",
+      "reason": "SIMRS Soepraoen (Java Swing, 2026-10-21): 357 temuan TINGGI, sumbernya parameter String method mana pun — 222 di satu berkas (RMRiwayatPerawatan.java, nomor rawat dari tabel hasil query), 42 di dalam helper fungsi/sekuel.java (tempat SQL dijalankan, bukan tempat nilai masuk), sisanya kueri grafik. Tidak membedakan nilai ketikan pengguna dari data basis data. Diganti xeria-rules java-sql-from-ui-input (kolom isian yang bisa diketik) dan java-sql-from-request (parameter permintaan web), yang menunjuk tempat nilai masuk.",
+      "status": "requires-project-scope-and-positive-regression"
+    },
+    {
+      "id": "semgrep-rules.rules.java.lang.security.audit.sqli.jdbc-sqli",
+      "reason": "SIMRS Soepraoen (2026-10-22): 70 temuan RENDAH di 37 berkas, sumbernya parameter method — mis. grafikanalisa/*.java menerima potongan klausa WHERE (\"symbol\") yang disusun pemanggilnya. Kelas temuan yang sama dengan formatted-sql-string yang sudah disupresi (58 di antaranya dulu terlipat ke sana di baris yang sama). Aliran dari kolom isian dan permintaan web dilaporkan xeria-rules java-sql-from-ui-input dan java-sql-from-request di tempat nilai masuk.",
+      "status": "requires-project-scope-and-positive-regression"
+    }
+  ]
+}
